@@ -12,5 +12,8 @@
     "tsup": "^8.5.1",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "yoga-layout": "^3.2.1"
   }
 }

@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      yoga-layout:
+        specifier: ^3.2.1
+        version: 3.2.1
     devDependencies:
       tsup:
         specifier: ^8.5.1
@@ -708,6 +712,9 @@ packages:
     engines: {node: '>=8'}
     hasBin: true
 
+  yoga-layout@3.2.1:
+    resolution: {integrity: sha512-0LPOt3AxKqMdFBZA3HBAt/t/8vIKq7VaQYbuA8WxCgung+p9TVyKRYdpvCb80HcdTN2NkbIKbhNwKUfm3tQywQ==}
+
 snapshots:
 
   '@esbuild/aix-ppc64@0.27.4':
@@ -1273,3 +1280,5 @@ snapshots:
     dependencies:
       siginfo: 2.0.0
       stackback: 0.0.2
+
+  yoga-layout@3.2.1: {}
