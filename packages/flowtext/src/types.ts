@@ -68,6 +68,7 @@ export type FlowtextLayoutResult = {
   baseline?: number;
   limitations?: string[];
   lines?: FlowtextLayoutLine[];
+  children?: FlowtextLayoutResult[];
 };
 
 export type FlowtextErrorCode =

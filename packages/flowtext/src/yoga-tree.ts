@@ -53,7 +53,7 @@ function createYogaTree(
   return yogaNode;
 }
 
-function applyStyle(node: YogaNode, style?: FlowtextStyle): void {
+export function applyStyle(node: YogaNode, style?: FlowtextStyle): void {
   if (!style) {
     return;
   }

@@ -9,3 +9,5 @@ export {
   type LayoutConstraints,
   type TextMeasureOptions,
 } from './types';
+export { layoutTree } from './layout-tree';
+export type { LayoutTreeOptions } from './layout-tree';
