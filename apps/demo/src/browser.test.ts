@@ -53,6 +53,9 @@ function createHarness() {
   const status = createFakeNode();
   const preset = createFakeNode('chat-thread');
   const compareMode = createFakeNode('', false);
+  const showProtectedFrames = createFakeNode('', false);
+  const showConstraintBounds = createFakeNode('', false);
+  const showLineBoxes = createFakeNode('', false);
   const sceneWidth = createFakeNode('720');
   const constraintWidth = createFakeNode('180');
   const constraintX = createFakeNode('420');
@@ -67,6 +70,9 @@ function createHarness() {
   const nodes = {
     '[data-control="preset"]': preset,
     '[data-control="compare-mode"]': compareMode,
+    '[data-control="show-protected-frames"]': showProtectedFrames,
+    '[data-control="show-constraint-bounds"]': showConstraintBounds,
+    '[data-control="show-line-boxes"]': showLineBoxes,
     '[data-control="scene-width"]': sceneWidth,
     '[data-control="constraint-width"]': constraintWidth,
     '[data-control="constraint-x"]': constraintX,
@@ -103,6 +109,9 @@ function createHarness() {
     status,
     preset,
     compareMode,
+    showProtectedFrames,
+    showConstraintBounds,
+    showLineBoxes,
     sceneWidth,
     constraintWidth,
     constraintX,
@@ -146,7 +155,12 @@ describe('mountPlaygroundDemo', () => {
     await mountPlaygroundDemo(harness.documentLike as never);
 
     expect(harness.app.innerHTML).toContain('Interactive playground');
-    expect(renderPlaygroundSnapshot).toHaveBeenCalledWith(state);
+    expect(harness.app.innerHTML).toContain('Overlay controls');
+    expect(renderPlaygroundSnapshot).toHaveBeenCalledWith(state, undefined, {
+      showProtectedFrames: false,
+      showConstraintBounds: false,
+      showLineBoxes: false,
+    });
     expect(harness.preview.innerHTML).toContain('<svg>preview</svg>');
     expect(harness.invariants.innerHTML).toContain('Protected title block');
     expect(harness.summary.innerHTML).toContain('Body width');
@@ -185,6 +199,12 @@ describe('mountPlaygroundDemo', () => {
     expect(patchPlaygroundState).toHaveBeenLastCalledWith(initialState, { sceneWidth: 640 });
     expect(renderPlaygroundSnapshot).toHaveBeenLastCalledWith(
       expect.objectContaining({ sceneWidth: 640 }),
+      undefined,
+      {
+        showProtectedFrames: false,
+        showConstraintBounds: false,
+        showLineBoxes: false,
+      },
     );
   });
 
@@ -245,12 +265,65 @@ describe('mountPlaygroundDemo', () => {
     await Promise.resolve();
 
     expect(createPlaygroundState).toHaveBeenLastCalledWith('chat-thread');
-    expect(renderPlaygroundSnapshot).toHaveBeenNthCalledWith(2, initialState);
-    expect(renderPlaygroundSnapshot).toHaveBeenNthCalledWith(3, baselineState);
+    expect(renderPlaygroundSnapshot).toHaveBeenNthCalledWith(2, initialState, undefined, {
+      showProtectedFrames: false,
+      showConstraintBounds: false,
+      showLineBoxes: false,
+    });
+    expect(renderPlaygroundSnapshot).toHaveBeenNthCalledWith(3, baselineState, undefined, {
+      showProtectedFrames: false,
+      showConstraintBounds: false,
+      showLineBoxes: false,
+    });
     expect(harness.preview.innerHTML).toContain('Comparison mode');
     expect(harness.preview.innerHTML).toContain('<svg>current</svg>');
     expect(harness.preview.innerHTML).toContain('<svg>baseline</svg>');
     expect(harness.summary.innerHTML).toContain('Delta vs baseline');
+  });
+
+  it('passes overlay preferences into snapshot rendering', async () => {
+    const harness = createHarness();
+    const initialState = {
+      presetId: 'chat-thread',
+      sceneWidth: 720,
+      constraintWidth: 180,
+      constraintX: 420,
+      constraintY: 190,
+    };
+
+    createPlaygroundState.mockReturnValue(initialState);
+    patchPlaygroundState.mockImplementation((current, patch) => ({ ...current, ...patch }));
+    renderPlaygroundSnapshot.mockResolvedValue({
+      svg: '<svg>preview</svg>',
+      invariants: [],
+      summary: [],
+      preset: { label: 'Chat thread' },
+      geometry: { dockSide: 'right' },
+      bodyLineCount: 4,
+    });
+
+    const { mountPlaygroundDemo } = await import('./browser');
+
+    await mountPlaygroundDemo(harness.documentLike as never);
+
+    harness.showProtectedFrames.checked = true;
+    harness.showProtectedFrames.dispatch('change');
+    harness.showConstraintBounds.checked = true;
+    harness.showConstraintBounds.dispatch('change');
+    harness.showLineBoxes.checked = true;
+    harness.showLineBoxes.dispatch('change');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(renderPlaygroundSnapshot).toHaveBeenLastCalledWith(
+      initialState,
+      undefined,
+      {
+        showProtectedFrames: true,
+        showConstraintBounds: true,
+        showLineBoxes: true,
+      },
+    );
   });
 
   it('updates the constraint position when the preview object is dragged', async () => {

@@ -5,7 +5,7 @@ import {
   type PlaygroundPresetId,
   type PlaygroundState,
 } from './playground';
-import { renderPlaygroundSnapshot } from './main';
+import { renderPlaygroundSnapshot, type PlaygroundOverlayOptions } from './main';
 
 type DocumentLike = {
   querySelector<T>(selector: string): T | null;
@@ -48,6 +48,9 @@ type InputLike = {
 type PlaygroundElements = {
   preset: InputLike;
   compareMode: InputLike;
+  showProtectedFrames: InputLike;
+  showConstraintBounds: InputLike;
+  showLineBoxes: InputLike;
   sceneWidth: InputLike;
   constraintWidth: InputLike;
   constraintX: InputLike;
@@ -76,12 +79,20 @@ export async function mountPlaygroundDemo(
   const elements = resolveElements(app);
   let state = createPlaygroundState('chat-thread');
   let compareMode = false;
+  let overlays: PlaygroundOverlayOptions = {
+    showProtectedFrames: false,
+    showConstraintBounds: false,
+    showLineBoxes: false,
+  };
   let renderToken = 0;
   let dragOrigin: { pointerX: number; pointerY: number; state: PlaygroundState } | null = null;
 
   const syncOutputs = () => {
     elements.preset.value = state.presetId;
     elements.compareMode.checked = compareMode;
+    elements.showProtectedFrames.checked = Boolean(overlays.showProtectedFrames);
+    elements.showConstraintBounds.checked = Boolean(overlays.showConstraintBounds);
+    elements.showLineBoxes.checked = Boolean(overlays.showLineBoxes);
     elements.sceneWidth.value = String(state.sceneWidth);
     elements.constraintWidth.value = String(state.constraintWidth);
     elements.constraintX.value = String(state.constraintX);
@@ -97,9 +108,9 @@ export async function mountPlaygroundDemo(
 
     elements.status.textContent = 'Measuring preview…';
 
-    const snapshot = await renderPlaygroundSnapshot(state);
+    const snapshot = await renderPlaygroundSnapshot(state, undefined, overlays);
     const baseline = compareMode
-      ? await renderPlaygroundSnapshot(createPlaygroundState(state.presetId))
+      ? await renderPlaygroundSnapshot(createPlaygroundState(state.presetId), undefined, overlays)
       : null;
 
     if (token !== renderToken) {
@@ -134,6 +145,30 @@ export async function mountPlaygroundDemo(
   });
   elements.compareMode.addEventListener('change', () => {
     compareMode = Boolean(elements.compareMode.checked);
+    syncOutputs();
+    void refresh();
+  });
+  elements.showProtectedFrames.addEventListener('change', () => {
+    overlays = {
+      ...overlays,
+      showProtectedFrames: Boolean(elements.showProtectedFrames.checked),
+    };
+    syncOutputs();
+    void refresh();
+  });
+  elements.showConstraintBounds.addEventListener('change', () => {
+    overlays = {
+      ...overlays,
+      showConstraintBounds: Boolean(elements.showConstraintBounds.checked),
+    };
+    syncOutputs();
+    void refresh();
+  });
+  elements.showLineBoxes.addEventListener('change', () => {
+    overlays = {
+      ...overlays,
+      showLineBoxes: Boolean(elements.showLineBoxes.checked),
+    };
     syncOutputs();
     void refresh();
   });
@@ -209,6 +244,10 @@ function renderShell(): string {
     presetOptions,
     '</select></label>',
     '<label class="control control-toggle"><span class="control-row"><span>Compare mode</span><span class="toggle-caption">Current vs preset baseline</span></span><input data-control="compare-mode" type="checkbox" /></label>',
+    '<div class="panel-subhead"><h3>Overlay controls</h3><p>Reveal the measured frames and line boxes without changing the engine output.</p></div>',
+    '<label class="control control-toggle"><span class="control-row"><span>Protected frames</span><span class="toggle-caption">Show reserved title shell</span></span><input data-control="show-protected-frames" type="checkbox" /></label>',
+    '<label class="control control-toggle"><span class="control-row"><span>Constraint bounds</span><span class="toggle-caption">Outline the movable object</span></span><input data-control="show-constraint-bounds" type="checkbox" /></label>',
+    '<label class="control control-toggle"><span class="control-row"><span>Line boxes</span><span class="toggle-caption">Draw measured text line boxes</span></span><input data-control="show-line-boxes" type="checkbox" /></label>',
     renderRangeControl('Scene width', 'scene-width', 540, 820, 10),
     renderRangeControl('Constraint width', 'constraint-width', 120, 280, 10),
     renderRangeControl('Constraint X', 'constraint-x', 24, 680, 4),
@@ -243,6 +282,9 @@ function resolveElements(root: QueryLike): PlaygroundElements {
   return {
     preset: requireElement<InputLike>(root, '[data-control="preset"]'),
     compareMode: requireElement<InputLike>(root, '[data-control="compare-mode"]'),
+    showProtectedFrames: requireElement<InputLike>(root, '[data-control="show-protected-frames"]'),
+    showConstraintBounds: requireElement<InputLike>(root, '[data-control="show-constraint-bounds"]'),
+    showLineBoxes: requireElement<InputLike>(root, '[data-control="show-line-boxes"]'),
     sceneWidth: requireElement<InputLike>(root, '[data-control="scene-width"]'),
     constraintWidth: requireElement<InputLike>(root, '[data-control="constraint-width"]'),
     constraintX: requireElement<InputLike>(root, '[data-control="constraint-x"]'),
