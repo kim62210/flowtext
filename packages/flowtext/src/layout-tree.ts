@@ -7,6 +7,7 @@ import {
   type TextMeasureResult,
   type TextMeasurementAdapter,
 } from './text-measure';
+import { wrapMeasurementError } from './validate';
 import {
   FLOWTEXT_SCHEMA_VERSION,
   type FlowtextLayoutLine,
@@ -96,10 +97,18 @@ function measureTextNode(
       whiteSpace: node.style?.whiteSpace,
     }),
   );
-  const measured = textAdapter.layout(prepared);
+  let measured: TextMeasureResult | Promise<TextMeasureResult>;
+
+  try {
+    measured = textAdapter.layout(prepared);
+  } catch (error) {
+    throw wrapMeasurementError(error);
+  }
 
   if (measured instanceof Promise) {
-    throw new Error('Text measurement must be synchronous during Yoga layout.');
+    throw wrapMeasurementError(
+      new Error('Text measurement must be synchronous during Yoga layout.'),
+    );
   }
 
   return measured;
