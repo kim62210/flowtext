@@ -41,11 +41,13 @@ type BoundingRectLike = {
 
 type InputLike = {
   value: string;
+  checked?: boolean;
   addEventListener(type: string, listener: () => void): void;
 };
 
 type PlaygroundElements = {
   preset: InputLike;
+  compareMode: InputLike;
   sceneWidth: InputLike;
   constraintWidth: InputLike;
   constraintX: InputLike;
@@ -73,11 +75,13 @@ export async function mountPlaygroundDemo(
 
   const elements = resolveElements(app);
   let state = createPlaygroundState('chat-thread');
+  let compareMode = false;
   let renderToken = 0;
   let dragOrigin: { pointerX: number; pointerY: number; state: PlaygroundState } | null = null;
 
   const syncOutputs = () => {
     elements.preset.value = state.presetId;
+    elements.compareMode.checked = compareMode;
     elements.sceneWidth.value = String(state.sceneWidth);
     elements.constraintWidth.value = String(state.constraintWidth);
     elements.constraintX.value = String(state.constraintX);
@@ -94,15 +98,25 @@ export async function mountPlaygroundDemo(
     elements.status.textContent = 'Measuring preview…';
 
     const snapshot = await renderPlaygroundSnapshot(state);
+    const baseline = compareMode
+      ? await renderPlaygroundSnapshot(createPlaygroundState(state.presetId))
+      : null;
 
     if (token !== renderToken) {
       return;
     }
 
-    elements.preview.innerHTML = snapshot.svg;
+    elements.preview.innerHTML = renderPreviewMarkup(snapshot.svg, baseline?.svg);
     elements.invariants.innerHTML = renderInvariantList(snapshot.invariants);
-    elements.summary.innerHTML = renderSummary(snapshot.summary);
-    elements.status.textContent = `${snapshot.preset.label} preset · ${snapshot.geometry.dockSide} dock · ${snapshot.bodyLineCount} body lines`;
+    elements.summary.innerHTML = renderSummary(snapshot.summary, baseline ? [
+      {
+        label: 'Delta vs baseline',
+        value: `${snapshot.bodyLineCount - baseline.bodyLineCount >= 0 ? '+' : ''}${snapshot.bodyLineCount - baseline.bodyLineCount} body lines`,
+      },
+    ] : []);
+    elements.status.textContent = compareMode
+      ? `${snapshot.preset.label} preset · compare mode on · ${snapshot.bodyLineCount} body lines`
+      : `${snapshot.preset.label} preset · ${snapshot.geometry.dockSide} dock · ${snapshot.bodyLineCount} body lines`;
   };
 
   const applyPatch = (patch: Partial<PlaygroundState>) => {
@@ -115,6 +129,11 @@ export async function mountPlaygroundDemo(
     const presetId = elements.preset.value as PlaygroundPresetId;
 
     state = createPlaygroundState(presetId);
+    syncOutputs();
+    void refresh();
+  });
+  elements.compareMode.addEventListener('change', () => {
+    compareMode = Boolean(elements.compareMode.checked);
     syncOutputs();
     void refresh();
   });
@@ -189,6 +208,7 @@ function renderShell(): string {
     '<label class="control"><span class="control-row"><span>Preset</span></span><select data-control="preset" class="playground-select">',
     presetOptions,
     '</select></label>',
+    '<label class="control control-toggle"><span class="control-row"><span>Compare mode</span><span class="toggle-caption">Current vs preset baseline</span></span><input data-control="compare-mode" type="checkbox" /></label>',
     renderRangeControl('Scene width', 'scene-width', 540, 820, 10),
     renderRangeControl('Constraint width', 'constraint-width', 120, 280, 10),
     renderRangeControl('Constraint X', 'constraint-x', 24, 680, 4),
@@ -222,6 +242,7 @@ function renderRangeControl(label: string, name: string, min: number, max: numbe
 function resolveElements(root: QueryLike): PlaygroundElements {
   return {
     preset: requireElement<InputLike>(root, '[data-control="preset"]'),
+    compareMode: requireElement<InputLike>(root, '[data-control="compare-mode"]'),
     sceneWidth: requireElement<InputLike>(root, '[data-control="scene-width"]'),
     constraintWidth: requireElement<InputLike>(root, '[data-control="constraint-width"]'),
     constraintX: requireElement<InputLike>(root, '[data-control="constraint-x"]'),
@@ -257,13 +278,36 @@ function renderInvariantList(invariants: Awaited<ReturnType<typeof renderPlaygro
   ].join('');
 }
 
-function renderSummary(summary: Awaited<ReturnType<typeof renderPlaygroundSnapshot>>['summary']): string {
+function renderSummary(
+  summary: Awaited<ReturnType<typeof renderPlaygroundSnapshot>>['summary'],
+  extras: Awaited<ReturnType<typeof renderPlaygroundSnapshot>>['summary'] = [],
+): string {
   return [
     '<dl class="summary-list">',
-    ...summary.map((metric) => (
+    ...[...summary, ...extras].map((metric) => (
       `<div class="summary-row"><dt>${escapeHtml(metric.label)}</dt><dd>${escapeHtml(metric.value)}</dd></div>`
     )),
     '</dl>',
+  ].join('');
+}
+
+function renderPreviewMarkup(currentSvg: string, baselineSvg?: string): string {
+  if (!baselineSvg) {
+    return currentSvg;
+  }
+
+  return [
+    '<div class="compare-shell">',
+    '<p class="compare-kicker">Comparison mode</p>',
+    '<div class="compare-grid">',
+    '<section class="compare-panel"><h3>Current</h3>',
+    currentSvg,
+    '</section>',
+    '<section class="compare-panel"><h3>Preset baseline</h3>',
+    baselineSvg,
+    '</section>',
+    '</div>',
+    '</div>',
   ].join('');
 }
 

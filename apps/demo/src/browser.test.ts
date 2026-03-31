@@ -10,8 +10,8 @@ vi.mock('./main', () => ({
 
 vi.mock('./playground', () => ({
   PLAYGROUND_PRESETS: [
-    { id: 'balanced', label: 'Balanced' },
-    { id: 'stress', label: 'Stress' },
+    { id: 'chat-thread', label: 'Chat thread' },
+    { id: 'inspector-dock', label: 'Inspector dock' },
   ],
   createPlaygroundState,
   patchPlaygroundState,
@@ -19,11 +19,12 @@ vi.mock('./playground', () => ({
 
 type FakeListener = (event?: unknown) => void;
 
-function createFakeNode(initialValue = '') {
+function createFakeNode(initialValue = '', checked = false) {
   const listeners = new Map<string, FakeListener[]>();
 
   return {
     value: initialValue,
+    checked,
     innerHTML: '',
     textContent: '',
     addEventListener(type: string, listener: FakeListener) {
@@ -50,7 +51,8 @@ function createHarness() {
   const invariants = createFakeNode();
   const summary = createFakeNode();
   const status = createFakeNode();
-  const preset = createFakeNode('balanced');
+  const preset = createFakeNode('chat-thread');
+  const compareMode = createFakeNode('', false);
   const sceneWidth = createFakeNode('720');
   const constraintWidth = createFakeNode('180');
   const constraintX = createFakeNode('420');
@@ -64,6 +66,7 @@ function createHarness() {
 
   const nodes = {
     '[data-control="preset"]': preset,
+    '[data-control="compare-mode"]': compareMode,
     '[data-control="scene-width"]': sceneWidth,
     '[data-control="constraint-width"]': constraintWidth,
     '[data-control="constraint-x"]': constraintX,
@@ -99,6 +102,7 @@ function createHarness() {
     summary,
     status,
     preset,
+    compareMode,
     sceneWidth,
     constraintWidth,
     constraintX,
@@ -119,7 +123,7 @@ describe('mountPlaygroundDemo', () => {
   it('mounts the playground shell and renders the first snapshot', async () => {
     const harness = createHarness();
     const state = {
-      presetId: 'balanced',
+      presetId: 'chat-thread',
       sceneWidth: 720,
       constraintWidth: 180,
       constraintX: 420,
@@ -132,7 +136,7 @@ describe('mountPlaygroundDemo', () => {
       svg: '<svg>preview</svg>',
       invariants: [{ id: 'title-block', label: 'Protected title block', detail: 'Still reserved.', status: 'stable' }],
       summary: [{ label: 'Body width', value: '296px' }],
-      preset: { label: 'Balanced' },
+        preset: { label: 'Chat thread' },
       geometry: { dockSide: 'right' },
       bodyLineCount: 4,
     });
@@ -152,7 +156,7 @@ describe('mountPlaygroundDemo', () => {
   it('re-renders when a control changes', async () => {
     const harness = createHarness();
     const initialState = {
-      presetId: 'balanced',
+      presetId: 'chat-thread',
       sceneWidth: 720,
       constraintWidth: 180,
       constraintX: 420,
@@ -165,7 +169,7 @@ describe('mountPlaygroundDemo', () => {
       svg: '<svg>preview</svg>',
       invariants: [],
       summary: [],
-      preset: { label: 'Balanced' },
+        preset: { label: 'Chat thread' },
       geometry: { dockSide: 'right' },
       bodyLineCount: 4,
     });
@@ -184,10 +188,75 @@ describe('mountPlaygroundDemo', () => {
     );
   });
 
+  it('renders a baseline comparison when compare mode is enabled', async () => {
+    const harness = createHarness();
+    const initialState = {
+      presetId: 'chat-thread',
+      sceneWidth: 720,
+      constraintWidth: 180,
+      constraintX: 420,
+      constraintY: 190,
+    };
+    const baselineState = {
+      presetId: 'chat-thread',
+      sceneWidth: 740,
+      constraintWidth: 176,
+      constraintX: 432,
+      constraintY: 184,
+    };
+
+    createPlaygroundState
+      .mockReturnValueOnce(initialState)
+      .mockReturnValueOnce(baselineState);
+    patchPlaygroundState.mockImplementation((current, patch) => ({ ...current, ...patch }));
+    renderPlaygroundSnapshot
+      .mockResolvedValueOnce({
+        svg: '<svg>initial</svg>',
+        invariants: [],
+        summary: [{ label: 'Body width', value: '296px' }],
+        preset: { label: 'Chat thread' },
+        geometry: { dockSide: 'right' },
+        bodyLineCount: 5,
+      })
+      .mockResolvedValueOnce({
+        svg: '<svg>current</svg>',
+        invariants: [],
+        summary: [{ label: 'Body width', value: '296px' }],
+        preset: { label: 'Chat thread' },
+        geometry: { dockSide: 'right' },
+        bodyLineCount: 5,
+      })
+      .mockResolvedValueOnce({
+        svg: '<svg>baseline</svg>',
+        invariants: [],
+        summary: [{ label: 'Body width', value: '312px' }],
+        preset: { label: 'Chat thread' },
+        geometry: { dockSide: 'right' },
+        bodyLineCount: 3,
+      });
+
+    const { mountPlaygroundDemo } = await import('./browser');
+
+    await mountPlaygroundDemo(harness.documentLike as never);
+
+    harness.compareMode.checked = true;
+    harness.compareMode.dispatch('change');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(createPlaygroundState).toHaveBeenLastCalledWith('chat-thread');
+    expect(renderPlaygroundSnapshot).toHaveBeenNthCalledWith(2, initialState);
+    expect(renderPlaygroundSnapshot).toHaveBeenNthCalledWith(3, baselineState);
+    expect(harness.preview.innerHTML).toContain('Comparison mode');
+    expect(harness.preview.innerHTML).toContain('<svg>current</svg>');
+    expect(harness.preview.innerHTML).toContain('<svg>baseline</svg>');
+    expect(harness.summary.innerHTML).toContain('Delta vs baseline');
+  });
+
   it('updates the constraint position when the preview object is dragged', async () => {
     const harness = createHarness();
     const initialState = {
-      presetId: 'balanced',
+      presetId: 'chat-thread',
       sceneWidth: 720,
       constraintWidth: 180,
       constraintX: 420,
@@ -200,7 +269,7 @@ describe('mountPlaygroundDemo', () => {
       svg: '<svg><g data-region="constraint-object"></g></svg>',
       invariants: [],
       summary: [],
-      preset: { label: 'Balanced' },
+      preset: { label: 'Chat thread' },
       geometry: { dockSide: 'right', constraintFrame: { x: 420, y: 190, width: 180 } },
       bodyLineCount: 4,
     });

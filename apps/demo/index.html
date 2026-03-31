@@ -117,6 +117,13 @@
         gap: 10px;
       }
 
+      .control-toggle {
+        padding: 12px 14px;
+        border: 1px solid rgba(188, 169, 139, 0.48);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.46);
+      }
+
       .control-row {
         display: flex;
         align-items: center;
@@ -128,6 +135,11 @@
       .control output {
         color: var(--text-muted);
         font-variant-numeric: tabular-nums;
+      }
+
+      .toggle-caption {
+        color: var(--text-muted);
+        font-size: 0.84rem;
       }
 
       .playground-select,
@@ -167,6 +179,40 @@
       .preview-surface svg {
         max-width: 100%;
         height: auto;
+      }
+
+      .compare-shell {
+        display: grid;
+        gap: 14px;
+        width: 100%;
+      }
+
+      .compare-kicker {
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .compare-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .compare-panel {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(188, 169, 139, 0.62);
+      }
+
+      .compare-panel h3 {
+        margin: 0;
+        font-size: 0.95rem;
       }
 
       .panel-stack {
@@ -245,6 +291,10 @@
 
         .preview-surface {
           min-height: 0;
+        }
+
+        .compare-grid {
+          grid-template-columns: 1fr;
         }
       }
 
