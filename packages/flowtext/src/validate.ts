@@ -1,7 +1,6 @@
 import type { FlowtextErrorCode, FlowtextNode, FlowtextStyle } from './types';
 
 const SUPPORTED_STYLE_KEYS = new Set<keyof FlowtextStyle>([
-  'display',
   'flexDirection',
   'justifyContent',
   'alignItems',
@@ -21,7 +20,6 @@ const SUPPORTED_STYLE_KEYS = new Set<keyof FlowtextStyle>([
   'fontFamily',
   'fontWeight',
   'whiteSpace',
-  'overflowWrap',
 ]);
 
 export class FlowtextError extends Error {

@@ -11,8 +11,7 @@ Raised when the input tree shape is structurally invalid.
 Examples:
 
 - a node is missing required identity or type information
-- a text node contains incompatible child structure
-- a public field has the wrong primitive type
+- an `inline` node is passed before inline semantics are implemented
 
 ### `UNSUPPORTED_STYLE`
 
@@ -21,8 +20,8 @@ Raised when a caller uses a style outside the documented v1 subset.
 Examples:
 
 - unsupported positioning properties
-- unsupported text layout flags
-- style combinations intentionally deferred from the first public release line
+- style keys outside the current supported subset
+- deferred style fields such as `gap` or side-specific spacing keys
 
 ### `MEASURE_FAILED`
 

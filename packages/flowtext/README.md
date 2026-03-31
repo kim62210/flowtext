@@ -9,7 +9,7 @@ It combines the official `yoga-layout` package for structural layout with `@chen
 When the package is publicly published, install it with:
 
 ```sh
-pnpm add flowtext yoga-layout @chenglou/pretext
+pnpm add flowtext
 ```
 
 ## Minimal Usage

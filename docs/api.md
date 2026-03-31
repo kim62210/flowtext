@@ -65,6 +65,7 @@ See `docs/architecture/error-model.md` for details.
 - Yoga initialization is treated as an async runtime concern.
 - Text measurement accuracy depends on the documented measurement profile.
 - The current layout path expects synchronous text measurement during Yoga layout.
+- The development demo is a lightweight workspace example, not a production-ready packaged app.
 
 ## Current Non-Goals
 

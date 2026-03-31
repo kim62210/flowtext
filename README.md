@@ -53,7 +53,7 @@ The first release line focuses on one narrow problem:
 When the package is publicly published, install it with:
 
 ```sh
-pnpm add flowtext yoga-layout @chenglou/pretext
+pnpm add flowtext
 ```
 
 At the current stage, Flowtext is intended for projects that can satisfy the runtime assumptions documented in `docs/architecture/measurement-profile.md`.
@@ -94,11 +94,11 @@ For a more complete walkthrough, see `docs/api.md` and `docs/examples-smoke.md`.
 
 ## Demo
 
-The repository includes a thin browser demo under `apps/demo/`.
+The repository includes a thin development demo under `apps/demo/`.
 
 - `apps/demo/src/main.ts` renders Flowtext output as SVG
 - `apps/demo/src/browser.ts` mounts that SVG into the demo page
-- `apps/demo/index.html` is a minimal browser entry for manual inspection
+- `apps/demo/index.html` is a minimal demo entry intended for a TypeScript-capable dev server, not a production-ready app shell
 
 ## Design Principles
 

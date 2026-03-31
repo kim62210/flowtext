@@ -3,7 +3,6 @@ export const FLOWTEXT_SCHEMA_VERSION = 1 as const;
 export type FlowtextNodeType = 'view' | 'text' | 'inline' | 'block';
 
 export type FlowtextStyle = {
-  display?: 'flex' | 'none';
   flexDirection?: 'row' | 'column';
   justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between';
   alignItems?: 'stretch' | 'flex-start' | 'center' | 'flex-end' | 'baseline';
@@ -23,7 +22,6 @@ export type FlowtextStyle = {
   fontFamily?: string;
   fontWeight?: string | number;
   whiteSpace?: 'normal' | 'pre-wrap';
-  overflowWrap?: 'break-word';
 };
 
 export type TextMeasureOptions = {
