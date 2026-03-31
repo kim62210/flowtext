@@ -1,11 +1,11 @@
 import type { FlowtextNode } from './types';
-import { validateNodeTree } from './validate';
+import { FlowtextError, validateNodeTree } from './validate';
 
 export function normalizeNodeTree(node: FlowtextNode): FlowtextNode {
   validateNodeTree(node);
 
   if (node.type === 'inline') {
-    throw new Error('Inline nodes are not supported yet.');
+    throw new FlowtextError('INVALID_NODE', 'Inline nodes are not supported yet.');
   }
 
   return {

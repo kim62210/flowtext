@@ -66,6 +66,9 @@ describe('calculateYogaLayout', () => {
       calculateYogaLayout(root, {
         width: 200,
       }),
-    ).rejects.toThrow('Inline nodes are not supported yet.');
+    ).rejects.toMatchObject({
+      code: 'INVALID_NODE',
+      message: 'Inline nodes are not supported yet.',
+    });
   });
 });

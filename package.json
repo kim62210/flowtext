@@ -4,6 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
+    "check": "pnpm test && pnpm typecheck && pnpm build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsup packages/flowtext/src/index.ts --format esm,cjs --dts --out-dir packages/flowtext/dist"

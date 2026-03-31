@@ -16,6 +16,8 @@ The format is intentionally lightweight while the project is pre-1.0. Entries ar
 - runtime validation and public error handling for invalid nodes, unsupported styles, and measurement failures
 - a thin SVG demo renderer and browser demo entry under `apps/demo/`
 - public API documentation and minimal usage guides
+- package-level release metadata, publish hooks, and package README/LICENSE/CHANGELOG files
+- a release-facing `check` script that runs tests, typecheck, and build together
 
 ### Planned
 - release metadata hardening and 1.0.0 readiness review

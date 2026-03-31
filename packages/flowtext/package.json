@@ -1,7 +1,46 @@
 {
   "name": "flowtext",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "A DOM-free layout core for box layout and paragraph measurement.",
   "type": "module",
+  "license": "MIT",
+  "homepage": "https://github.com/kim62210/flowtext",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kim62210/flowtext.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kim62210/flowtext/issues"
+  },
+  "keywords": [
+    "layout",
+    "flexbox",
+    "text-layout",
+    "canvas",
+    "svg",
+    "dom-free"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@chenglou/pretext": "^0.0.3",
+    "yoga-layout": "^3.2.1"
+  },
+  "scripts": {
+    "build": "pnpm --dir ../.. build",
+    "prepack": "pnpm --dir ../.. build"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

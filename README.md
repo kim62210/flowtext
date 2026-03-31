@@ -50,6 +50,8 @@ The first release line focuses on one narrow problem:
 
 ## Installation
 
+When the package is publicly published, install it with:
+
 ```sh
 pnpm add flowtext yoga-layout @chenglou/pretext
 ```
