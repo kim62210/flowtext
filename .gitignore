@@ -3,3 +3,4 @@
 progress.txt
 node_modules/
 packages/*/dist/
+coverage/
