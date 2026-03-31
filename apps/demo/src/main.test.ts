@@ -113,4 +113,20 @@ describe('renderPlaygroundSnapshot', () => {
     expect(readMetric(tight, 'Body width')).not.toBe(readMetric(wide, 'Body width'));
     expect(tight.invariants.every((entry) => entry.status === 'stable')).toBe(true);
   });
+
+  it('supports stronger debug overlays when requested', async () => {
+    const snapshot = await renderPlaygroundSnapshot(
+      createPlaygroundState('chat-thread'),
+      { textAdapter: createAdapter() },
+      {
+        showProtectedFrames: true,
+        showConstraintBounds: true,
+        showLineBoxes: true,
+      },
+    );
+
+    expect(snapshot.svg).toContain('data-overlay="protected-frame"');
+    expect(snapshot.svg).toContain('data-overlay="constraint-bounds"');
+    expect(snapshot.svg).toContain('data-overlay="line-box"');
+  });
 });

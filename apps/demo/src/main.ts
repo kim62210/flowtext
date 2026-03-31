@@ -24,6 +24,12 @@ export type PlaygroundSnapshot = {
   bodyLineCount: number;
 };
 
+export type PlaygroundOverlayOptions = {
+  showProtectedFrames?: boolean;
+  showConstraintBounds?: boolean;
+  showLineBoxes?: boolean;
+};
+
 export async function renderDemoSvg(
   tree: FlowtextNode,
   constraints: LayoutConstraints,
@@ -41,6 +47,7 @@ export async function renderDemoSvg(
 export async function renderPlaygroundSnapshot(
   state: PlaygroundState,
   options: LayoutTreeOptions = {},
+  overlays: PlaygroundOverlayOptions = {},
 ): Promise<PlaygroundSnapshot> {
   const geometry = derivePlaygroundGeometry(state);
   const preset = getPlaygroundPreset(state.presetId);
@@ -75,6 +82,7 @@ export async function renderPlaygroundSnapshot(
       bodyLayout,
       titleLineCount,
       bodyLineCount,
+      overlays,
     }),
     invariants,
     summary,
@@ -185,10 +193,11 @@ type RenderPlaygroundSvgInput = {
   bodyLayout: FlowtextLayoutResult;
   titleLineCount: number;
   bodyLineCount: number;
+  overlays: PlaygroundOverlayOptions;
 };
 
 function renderPlaygroundSvg(input: RenderPlaygroundSvgInput): string {
-  const { geometry, preset, titleLayout, bodyLayout, bodyLineCount } = input;
+  const { geometry, preset, titleLayout, bodyLayout, bodyLineCount, overlays } = input;
   const pillWidth = 124;
   const pillGap = 12;
   const pillMarkup = preset.summaryPills.map((pill, index) => {
@@ -212,15 +221,21 @@ function renderPlaygroundSvg(input: RenderPlaygroundSvgInput): string {
     `<rect x="0" y="0" width="${geometry.sceneWidth}" height="${geometry.sceneHeight}" rx="28" fill="#fcf8f0" />`,
     `<rect x="0" y="0" width="${geometry.sceneWidth}" height="${geometry.sceneHeight}" rx="28" fill="url(#preview-grid)" opacity="0.8" />`,
     `<rect x="${geometry.titleFrame.x}" y="${geometry.titleFrame.y}" width="${geometry.titleFrame.width}" height="${geometry.titleFrame.height}" rx="20" fill="#f1eadf" stroke="#c8b89d" data-region="protected-title" />`,
+    overlays.showProtectedFrames
+      ? `<rect data-overlay="protected-frame" x="${geometry.titleFrame.x}" y="${geometry.titleFrame.y}" width="${geometry.titleFrame.width}" height="${geometry.titleFrame.height}" rx="20" fill="none" stroke="#8c6f4d" stroke-width="2" stroke-dasharray="10 6" />`
+      : '',
     `<text x="${geometry.titleFrame.x + 16}" y="${geometry.titleFrame.y + 22}" fill="#705f4d" font-size="12" letter-spacing="0.16em">PROTECTED TITLE BLOCK</text>`,
-    renderTextLines(titleLayout, geometry.titleFrame.x + 14, geometry.titleFrame.y + 38, '#201c17'),
+    renderTextLines(titleLayout, geometry.titleFrame.x + 14, geometry.titleFrame.y + 38, '#201c17', overlays.showLineBoxes),
     pillMarkup,
     `<rect x="${geometry.bodyFrame.x}" y="${geometry.bodyFrame.y}" width="${geometry.bodyFrame.width}" height="${geometry.bodyFrame.height}" rx="22" fill="none" stroke="#cebda3" stroke-dasharray="8 8" />`,
     `<rect x="${geometry.contentFrame.x}" y="${geometry.contentFrame.y}" width="${geometry.contentFrame.width}" height="${geometry.contentFrame.height}" rx="18" fill="#fffdf8" stroke="#c6d3d7" stroke-dasharray="7 6" data-region="flow-area" />`,
     `<text x="${geometry.contentFrame.x + 14}" y="${geometry.contentFrame.y + 22}" fill="#647278" font-size="12" letter-spacing="0.16em">FLOW AREA · ${Math.round(geometry.contentFrame.width)}PX</text>`,
-    renderTextLines(bodyLayout, geometry.contentFrame.x + 14, geometry.contentFrame.y + 40, '#1f2937'),
+    renderTextLines(bodyLayout, geometry.contentFrame.x + 14, geometry.contentFrame.y + 40, '#1f2937', overlays.showLineBoxes),
     `<g transform="translate(${geometry.constraintFrame.x} ${geometry.constraintFrame.y})" data-region="constraint-object">`,
     `<rect width="${geometry.constraintFrame.width}" height="${geometry.constraintFrame.height}" rx="22" fill="#dfe8eb" stroke="#7b98a2" />`,
+    overlays.showConstraintBounds
+      ? `<rect data-overlay="constraint-bounds" width="${geometry.constraintFrame.width}" height="${geometry.constraintFrame.height}" rx="22" fill="none" stroke="#144b61" stroke-width="2" stroke-dasharray="8 5" />`
+      : '',
     `<text x="16" y="24" fill="#48606a" font-size="12" letter-spacing="0.16em">MOVABLE CONSTRAINT</text>`,
     `<text x="16" y="58" fill="#13232b" font-size="18">${geometry.dockSide === 'left' ? 'Docked left' : 'Docked right'}</text>`,
     `<text x="16" y="84" fill="#526670" font-size="13">Resize or shift this block to reflow the body column.</text>`,
@@ -248,12 +263,23 @@ function renderDebugNode(node: FlowtextLayoutResult): string {
   return `${rect}${lines}${children}`;
 }
 
-function renderTextLines(node: FlowtextLayoutResult, offsetX: number, offsetY: number, fill: string): string {
+function renderTextLines(
+  node: FlowtextLayoutResult,
+  offsetX: number,
+  offsetY: number,
+  fill: string,
+  showLineBoxes = false,
+): string {
   return node.lines?.map((line) => {
     const x = offsetX + line.x;
     const y = offsetY + line.y + line.height - 4;
 
-    return `<text x="${x}" y="${y}" font-size="14" fill="${fill}">${escapeXml(line.text)}</text>`;
+    return [
+      showLineBoxes
+        ? `<rect data-overlay="line-box" x="${x - 4}" y="${y - line.height + 4}" width="${line.width + 8}" height="${line.height}" rx="10" fill="rgba(20, 52, 61, 0.08)" stroke="rgba(20, 52, 61, 0.24)" />`
+        : '',
+      `<text x="${x}" y="${y}" font-size="14" fill="${fill}">${escapeXml(line.text)}</text>`,
+    ].join('');
   }).join('') ?? '';
 }
 
