@@ -1,0 +1,16 @@
+{
+  "name": "flowtext-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "tsup packages/flowtext/src/index.ts --format esm,cjs --dts --out-dir packages/flowtext/dist"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

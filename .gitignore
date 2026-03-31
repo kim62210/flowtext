@@ -1,3 +1,5 @@
 .worktrees/
 .omc/
 progress.txt
+node_modules/
+packages/*/dist/
