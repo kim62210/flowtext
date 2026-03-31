@@ -90,6 +90,14 @@ console.log(result.children?.[0]?.lines);
 
 For a more complete walkthrough, see `docs/api.md` and `docs/examples-smoke.md`.
 
+## Demo
+
+The repository includes a thin browser demo under `apps/demo/`.
+
+- `apps/demo/src/main.ts` renders Flowtext output as SVG
+- `apps/demo/src/browser.ts` mounts that SVG into the demo page
+- `apps/demo/index.html` is a minimal browser entry for manual inspection
+
 ## Design Principles
 
 1. **Small core first**
