@@ -85,18 +85,25 @@ function measureTextNode(
   const lineHeight = node.style?.lineHeight ?? fontSize;
   const measuredWidth = widthMode === 0 || Number.isNaN(width) ? 0 : width;
 
-  const prepared = textAdapter.prepare(
-    createTextMeasureRequest({
-      text: node.text ?? '',
-      fontFamily: node.style?.fontFamily ?? 'sans-serif',
-      fontSize,
-      lineHeight,
-      width: measuredWidth,
-      locale: node.textOptions?.locale,
-      fontWeight: node.style?.fontWeight,
-      whiteSpace: node.style?.whiteSpace,
-    }),
-  );
+  let prepared;
+
+  try {
+    prepared = textAdapter.prepare(
+      createTextMeasureRequest({
+        text: node.text ?? '',
+        fontFamily: node.style?.fontFamily ?? 'sans-serif',
+        fontSize,
+        lineHeight,
+        width: measuredWidth,
+        locale: node.textOptions?.locale,
+        fontWeight: node.style?.fontWeight,
+        whiteSpace: node.style?.whiteSpace,
+      }),
+    );
+  } catch (error) {
+    throw wrapMeasurementError(error);
+  }
+
   let measured: TextMeasureResult | Promise<TextMeasureResult>;
 
   try {

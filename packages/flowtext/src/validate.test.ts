@@ -64,4 +64,31 @@ describe('Flowtext validation and public errors', () => {
       code: 'MEASURE_FAILED',
     });
   });
+
+  it('wraps unexpected prepare failures as MEASURE_FAILED', async () => {
+    const adapter: TextMeasurementAdapter = {
+      prepare() {
+        throw new Error('Canvas context unavailable.');
+      },
+      layout() {
+        throw new Error('unreachable');
+      },
+    };
+
+    const node: FlowtextNode = {
+      id: 'root',
+      type: 'text',
+      text: 'Flowtext',
+      style: {
+        fontFamily: 'Inter',
+        fontSize: 16,
+        lineHeight: 24,
+      },
+    };
+
+    await expect(layoutTree(node, { width: 120 }, { textAdapter: adapter })).rejects.toMatchObject({
+      code: 'MEASURE_FAILED',
+      message: 'Canvas context unavailable.',
+    });
+  });
 });
