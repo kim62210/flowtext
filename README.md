@@ -48,6 +48,48 @@ The first release line focuses on one narrow problem:
 - browser-independent pixel identity guarantees
 - universal server-side parity across all hosts
 
+## Installation
+
+```sh
+pnpm add flowtext yoga-layout @chenglou/pretext
+```
+
+At the current stage, Flowtext is intended for projects that can satisfy the runtime assumptions documented in `docs/architecture/measurement-profile.md`.
+
+## Minimal Usage
+
+```ts
+import { layoutTree } from 'flowtext';
+
+const result = await layoutTree(
+  {
+    id: 'root',
+    type: 'view',
+    style: {
+      width: 320,
+      flexDirection: 'column',
+    },
+    children: [
+      {
+        id: 'title',
+        type: 'text',
+        text: 'Flowtext turns Yoga and Pretext into one layout tree.',
+        style: {
+          fontFamily: 'Inter',
+          fontSize: 16,
+          lineHeight: 24,
+        },
+      },
+    ],
+  },
+  { width: 320 },
+);
+
+console.log(result.children?.[0]?.lines);
+```
+
+For a more complete walkthrough, see `docs/api.md` and `docs/examples-smoke.md`.
+
 ## Design Principles
 
 1. **Small core first**
