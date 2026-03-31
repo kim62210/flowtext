@@ -3,20 +3,36 @@ import { describe, expect, it } from 'vitest';
 import { createPlaygroundState, patchPlaygroundState, derivePlaygroundGeometry, getPlaygroundPreset } from './playground';
 
 describe('playground state model', () => {
+  it('ships realistic scenario presets for the playground', () => {
+    expect(createPlaygroundState('chat-thread')).toMatchObject({
+      presetId: 'chat-thread',
+    });
+    expect(createPlaygroundState('inspector-dock')).toMatchObject({
+      presetId: 'inspector-dock',
+    });
+    expect(createPlaygroundState('media-caption')).toMatchObject({
+      presetId: 'media-caption',
+    });
+
+    expect(getPlaygroundPreset('chat-thread')).toMatchObject({
+      label: 'Chat thread',
+    });
+  });
+
   it('resets to curated preset defaults when the preset changes', () => {
-    const initial = createPlaygroundState('balanced');
-    const updated = patchPlaygroundState(initial, { presetId: 'stress' });
+    const initial = createPlaygroundState('chat-thread');
+    const updated = patchPlaygroundState(initial, { presetId: 'inspector-dock' });
 
     expect(updated).toMatchObject({
-      presetId: 'stress',
-      sceneWidth: 560,
-      constraintWidth: 220,
+      presetId: 'inspector-dock',
+      sceneWidth: 700,
+      constraintWidth: 210,
     });
     expect(updated.constraintX).not.toBe(initial.constraintX);
   });
 
   it('clamps the movable constraint inside the safe body zone', () => {
-    const updated = patchPlaygroundState(createPlaygroundState('balanced'), {
+    const updated = patchPlaygroundState(createPlaygroundState('chat-thread'), {
       sceneWidth: 540,
       constraintX: 999,
       constraintY: -200,
@@ -38,7 +54,7 @@ describe('playground state model', () => {
 
   it('switches the dock side when the constraint moves left of center', () => {
     const geometry = derivePlaygroundGeometry(
-      patchPlaygroundState(createPlaygroundState('balanced'), {
+      patchPlaygroundState(createPlaygroundState('chat-thread'), {
         constraintX: 60,
       }),
     );

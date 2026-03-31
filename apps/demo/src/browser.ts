@@ -72,7 +72,7 @@ export async function mountPlaygroundDemo(
   app.innerHTML = renderShell();
 
   const elements = resolveElements(app);
-  let state = createPlaygroundState('balanced');
+  let state = createPlaygroundState('chat-thread');
   let renderToken = 0;
   let dragOrigin: { pointerX: number; pointerY: number; state: PlaygroundState } | null = null;
 

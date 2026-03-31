@@ -1,4 +1,4 @@
-export type PlaygroundPresetId = 'balanced' | 'stress' | 'wide';
+export type PlaygroundPresetId = 'chat-thread' | 'inspector-dock' | 'media-caption';
 
 export type PlaygroundState = {
   presetId: PlaygroundPresetId;
@@ -66,45 +66,45 @@ const MIN_CONSTRAINT_WIDTH = 120;
 
 export const PLAYGROUND_PRESETS: PlaygroundPreset[] = [
   {
-    id: 'balanced',
-    label: 'Balanced',
-    description: 'A roomy setup that keeps the dock off to the side and the footer pinned.',
-    title: 'Flowtext keeps the title block protected while the body rewraps around current constraints.',
-    body: 'Move the constraint object or squeeze the page width to see how the body column keeps its safe frame, the title stays reserved, and the action area remains anchored to the lower edge. This is a debugging playground for layout resilience, not a production renderer.',
-    summaryPills: ['Protected title', 'Anchored actions', 'Measured wrap'],
+    id: 'chat-thread',
+    label: 'Chat thread',
+    description: 'A conversation card where the message rail can move without pushing the title or action tray off their anchors.',
+    title: 'Conversation rail stays flexible while the pinned header and quick actions remain stable.',
+    body: 'Drag the conversation rail or tighten the sandbox width to see how a messaging surface can rewrap long copy without losing the reserved title band or the anchored reply controls. The preview is intentionally mechanical: it exposes the safe frame rather than hiding it behind polished chrome.',
+    summaryPills: ['Conversation rail', 'Pinned reply tray', 'Wrapped copy'],
     defaults: {
-      sceneWidth: 720,
-      constraintWidth: 180,
-      constraintX: 420,
-      constraintY: 188,
+      sceneWidth: 740,
+      constraintWidth: 176,
+      constraintX: 432,
+      constraintY: 184,
     },
   },
   {
-    id: 'stress',
-    label: 'Stress',
-    description: 'A tighter sandbox that pushes the body column toward its minimum safe width.',
-    title: 'Stress the body width without letting the title or footer drift.',
-    body: 'The stress preset narrows the content frame and increases wrap pressure. Flowtext still computes the text inside the declared frame while the preview makes the stable regions visible. The point is to show the safe area, not to pretend that the demo is a full renderer.',
-    summaryPills: ['Narrow body', 'Stable anchors', 'Explicit bounds'],
+    id: 'inspector-dock',
+    label: 'Inspector dock',
+    description: 'A floating inspector that can swing across the body without breaking the protected document title and action footer.',
+    title: 'The inspector dock is movable, but the document shell still protects the title block and publish actions.',
+    body: 'This preset mimics a design tool or CMS inspector. Move the dock from side to side and watch the text column adapt without leaking into the lower action tray. The point is to show that the constraint object changes the flow area, not the structural anchors.',
+    summaryPills: ['Inspector dock', 'Stable shell', 'Flow-safe body'],
     defaults: {
-      sceneWidth: 560,
-      constraintWidth: 220,
-      constraintX: 250,
-      constraintY: 204,
+      sceneWidth: 700,
+      constraintWidth: 210,
+      constraintX: 214,
+      constraintY: 210,
     },
   },
   {
-    id: 'wide',
-    label: 'Wide',
-    description: 'A wider canvas that shows how the same layout rules scale without rewriting the tree.',
-    title: 'Widen the sandbox and the body opens up while the protected regions stay fixed.',
-    body: 'The wide preset gives the text more room, shortens the wrapped body copy, and still keeps the title block isolated from the dock and the footer actions. The layout summary makes those invariants obvious instead of hiding them behind a pretty screenshot.',
-    summaryPills: ['Wide body', 'Lower wrap count', 'Same stable zones'],
+    id: 'media-caption',
+    label: 'Media caption',
+    description: 'A media card where a movable caption module reflows the narrative copy while the title and CTA footer keep their slots.',
+    title: 'Caption modules can shift around the artwork area while the surrounding story layout keeps its reserved bands.',
+    body: 'Use this preset to mimic editorial cards or story attachments. As the caption module moves and resizes, the body copy recomputes inside the remaining safe column, but the top title band and lower call-to-action block stay visibly anchored.',
+    summaryPills: ['Caption module', 'Editorial shell', 'Anchored CTA'],
     defaults: {
-      sceneWidth: 800,
-      constraintWidth: 160,
-      constraintX: 564,
-      constraintY: 176,
+      sceneWidth: 780,
+      constraintWidth: 168,
+      constraintX: 552,
+      constraintY: 174,
     },
   },
 ];
@@ -119,7 +119,7 @@ export function getPlaygroundPreset(presetId: PlaygroundPresetId): PlaygroundPre
   return preset;
 }
 
-export function createPlaygroundState(presetId: PlaygroundPresetId = 'balanced'): PlaygroundState {
+export function createPlaygroundState(presetId: PlaygroundPresetId = 'chat-thread'): PlaygroundState {
   const preset = getPlaygroundPreset(presetId);
 
   return {

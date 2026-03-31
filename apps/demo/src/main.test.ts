@@ -75,7 +75,7 @@ describe('renderPlaygroundSnapshot', () => {
   });
 
   it('renders an SVG preview with visible invariants and summary data', async () => {
-    const snapshot = await renderPlaygroundSnapshot(createPlaygroundState('balanced'), {
+    const snapshot = await renderPlaygroundSnapshot(createPlaygroundState('chat-thread'), {
       textAdapter: createAdapter(),
     });
 
@@ -83,6 +83,7 @@ describe('renderPlaygroundSnapshot', () => {
     expect(snapshot.svg).toContain('data-region="protected-title"');
     expect(snapshot.svg).toContain('data-region="constraint-object"');
     expect(snapshot.svg).toContain('data-region="anchored-actions"');
+    expect(snapshot.svg).toContain('Conversation rail');
     expect(snapshot.invariants).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'title-block', status: 'stable' }),
@@ -96,11 +97,11 @@ describe('renderPlaygroundSnapshot', () => {
 
   it('recomputes body wrapping when the sandbox gets tighter', async () => {
     const adapter = createAdapter();
-    const wide = await renderPlaygroundSnapshot(createPlaygroundState('balanced'), {
+    const wide = await renderPlaygroundSnapshot(createPlaygroundState('chat-thread'), {
       textAdapter: adapter,
     });
     const tight = await renderPlaygroundSnapshot(
-      patchPlaygroundState(createPlaygroundState('balanced'), {
+      patchPlaygroundState(createPlaygroundState('chat-thread'), {
         sceneWidth: 560,
         constraintWidth: 220,
         constraintX: 280,
