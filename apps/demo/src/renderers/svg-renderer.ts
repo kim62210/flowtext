@@ -1,5 +1,6 @@
-import type { FlowtextLayoutResult, FlowtextLayoutLine } from 'flowtext';
+import type { FlowtextLayoutResult } from 'flowtext';
 import type { Renderer, ViewportSize } from './types';
+import { COLORS, LABEL_FONT_SIZE, LABEL_OFFSET_X, LABEL_OFFSET_Y, baselineY } from './render-constants';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const EDGE_THRESHOLD = 10;
@@ -58,19 +59,20 @@ function renderNode(
   rect.setAttribute('y', '0');
   rect.setAttribute('width', String(result.width));
   rect.setAttribute('height', String(result.height));
-  rect.setAttribute('fill', isDragging ? 'rgba(99,102,241,0.08)' : isSelected ? 'rgba(99,102,241,0.04)' : 'transparent');
-  rect.setAttribute('stroke', isSelected || isDragging ? '#6366f1' : '#bbb');
-  rect.setAttribute('stroke-width', isSelected || isDragging ? '1.5' : '0.5');
+  const active = isSelected || isDragging;
+  rect.setAttribute('fill', active ? 'rgba(99,102,241,0.04)' : 'transparent');
+  rect.setAttribute('stroke', active ? COLORS.strokeSelected : COLORS.stroke);
+  rect.setAttribute('stroke-width', active ? '1.5' : '0.5');
   if (isDragging) rect.setAttribute('stroke-dasharray', '5 3');
   g.appendChild(rect);
 
   // ID label
   const label = createEl('text') as SVGTextElement;
-  label.setAttribute('x', '3');
-  label.setAttribute('y', '10');
-  label.setAttribute('font-size', '8');
-  label.setAttribute('font-family', "system-ui, sans-serif");
-  label.setAttribute('fill', isSelected || isDragging ? '#6366f1' : '#999');
+  label.setAttribute('x', String(LABEL_OFFSET_X));
+  label.setAttribute('y', String(LABEL_OFFSET_Y));
+  label.setAttribute('font-size', String(LABEL_FONT_SIZE));
+  label.setAttribute('font-family', 'system-ui, sans-serif');
+  label.setAttribute('fill', active ? COLORS.labelSelected : COLORS.label);
   label.setAttribute('pointer-events', 'none');
   label.textContent = result.id;
   g.appendChild(label);
@@ -79,9 +81,11 @@ function renderNode(
     for (const line of result.lines) {
       const t = createEl('text') as SVGTextElement;
       t.setAttribute('x', String(line.x));
-      t.setAttribute('y', String(line.y + line.height * 0.85));
-      t.setAttribute('font-size', String(line.height > 0 ? line.height : 14));
-      t.setAttribute('fill', '#2c2c2c');
+      t.setAttribute('y', String(baselineY(line.y, line.height)));
+      const fontSize = line.height > 0 ? line.height : 14;
+      t.setAttribute('font-size', String(fontSize));
+      t.setAttribute('font-family', 'sans-serif');
+      t.setAttribute('fill', COLORS.text);
       t.setAttribute('pointer-events', 'none');
       t.textContent = line.text;
       g.appendChild(t);
