@@ -11,3 +11,4 @@ export {
 } from './types';
 export { layoutTree } from './layout-tree';
 export type { LayoutTreeOptions } from './layout-tree';
+export { FlowtextError } from './validate';

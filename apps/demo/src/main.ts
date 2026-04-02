@@ -1,4 +1,4 @@
-import type { FlowtextLayoutResult } from 'flowtext';
+import { FlowtextError, type FlowtextLayoutResult } from 'flowtext';
 import { DemoState } from './state';
 import { SvgRenderer } from './renderers/svg-renderer';
 import { CanvasRenderer } from './renderers/canvas-renderer';
@@ -181,18 +181,16 @@ init();
 
 // --- Error Formatting ---
 function formatErrorHint(error: unknown): string {
-  if (error instanceof Error) {
-    const msg = error.message;
-    if (msg.includes('UNSUPPORTED_STYLE') || ('code' in error && (error as { code: string }).code === 'UNSUPPORTED_STYLE')) {
-      return `${msg}\n\nSupported: flexDirection, justifyContent, alignItems, alignSelf, flexGrow, flexShrink, width, height, minWidth, maxWidth, minHeight, maxHeight, padding, margin, fontSize, lineHeight, fontFamily, fontWeight, whiteSpace`;
+  if (error instanceof FlowtextError) {
+    switch (error.code) {
+      case 'UNSUPPORTED_STYLE':
+        return `${error.message}\n\nSupported: flexDirection, justifyContent, alignItems, alignSelf, flexGrow, flexShrink, width, height, minWidth, maxWidth, minHeight, maxHeight, padding, margin, fontSize, lineHeight, fontFamily, fontWeight, whiteSpace`;
+      case 'INVALID_NODE':
+        return `${error.message}\n\nSupported node types: "view", "text". Each node must have "id" and "type".`;
+      case 'MEASURE_FAILED':
+        return `${error.message}\n\nCheck that text nodes have valid fontSize and fontFamily.`;
     }
-    if (msg.includes('INVALID_NODE') || ('code' in error && (error as { code: string }).code === 'INVALID_NODE')) {
-      return `${msg}\n\nSupported node types: "view", "text". Each node must have "id" and "type".`;
-    }
-    if (msg.includes('MEASURE_FAILED') || ('code' in error && (error as { code: string }).code === 'MEASURE_FAILED')) {
-      return `${msg}\n\nCheck that text nodes have valid fontSize and fontFamily.`;
-    }
-    return msg;
   }
+  if (error instanceof Error) return error.message;
   return String(error);
 }
