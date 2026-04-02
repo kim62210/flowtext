@@ -44,6 +44,11 @@ export class CanvasRenderer implements Renderer {
     ctx.save();
     ctx.translate(node.x, node.y);
 
+    // Clip to node bounds so text doesn't overflow
+    ctx.beginPath();
+    ctx.rect(0, 0, node.width, node.height);
+    ctx.clip();
+
     // Border -- same color as SVG
     ctx.strokeStyle = COLORS.stroke;
     ctx.lineWidth = 0.5;
