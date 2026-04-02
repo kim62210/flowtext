@@ -128,7 +128,7 @@ interface DragState {
 export class SvgRenderer implements Renderer {
   private svg: SVGSVGElement | null = null;
   private container: HTMLElement | null = null;
-  private interaction: SvgInteraction = {};
+  interaction: SvgInteraction = {};
   private lastResult: FlowtextLayoutResult | null = null;
   private nodeLayouts = new Map<string, NodeLayout>();
   private dragState: DragState | null = null;
