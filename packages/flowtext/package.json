@@ -34,7 +34,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@chenglou/pretext": "^0.0.3",
+    "@chenglou/pretext": "^0.0.4",
     "yoga-layout": "^3.2.1"
   },
   "scripts": {
