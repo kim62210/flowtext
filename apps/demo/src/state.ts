@@ -42,6 +42,20 @@ export class DemoState extends EventTarget {
     this.scheduleLayout();
   }
 
+  /** Batch multiple style updates into a single layout pass */
+  updateStyles(nodeId: string, updates: Record<string, string | number | undefined>): void {
+    const node = this.nodeIndex.get(nodeId);
+    if (!node) return;
+    if (!node.style) {
+      node.style = {};
+    }
+    for (const [key, value] of Object.entries(updates)) {
+      (node.style as Record<string, string | number | undefined>)[key] = value;
+    }
+    this.dispatchEvent(new CustomEvent('node-change', { detail: this.node }));
+    this.scheduleLayout();
+  }
+
   updateText(nodeId: string, text: string): void {
     const node = this.nodeIndex.get(nodeId);
     if (!node) return;
