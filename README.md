@@ -1,64 +1,41 @@
 # Flowtext
 
-**A small DOM-free layout core for box layout and paragraph measurement.**
+[![CI](https://github.com/kim62210/flowtext/actions/workflows/ci.yml/badge.svg)](https://github.com/kim62210/flowtext/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/flowtext.svg)](https://www.npmjs.com/package/flowtext)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-Flowtext combines **Yoga** for box layout and **Pretext** for paragraph measurement and line layout. It is designed for renderers that cannot rely on browser DOM layout, such as Canvas, WebGL, SVG, server-driven image generation, and other programmatic UI surfaces.
+**DOM-free layout engine for Canvas, WebGL, SVG, and server-side rendering.**
 
-The initial runtime plan is based on the official `yoga-layout` package plus `@chenglou/pretext`, with an explicit async bootstrap boundary for Yoga initialization and a documented measurement profile for predictable output.
+Flowtext combines [Yoga](https://yogalayout.dev/) (flexbox) and [Pretext](https://github.com/chenglou/pretext) (text measurement) into a single layout tree. Give it containers and text, get back pixel positions and line breaks -- no browser required.
 
-## Status
+## Why Flowtext?
 
-Flowtext is currently **experimental** and **pre-1.0**.
+DOM-based layout depends on the browser. Outside the browser -- Canvas, WebGL, server-side image generation -- there is no `getBoundingClientRect()`. Yoga solves box layout but is **text-blind**: it cannot measure paragraphs or compute line breaks. Pretext measures text but does not handle structural layout.
 
-- breaking changes are expected
-- APIs, result shapes, and internal package boundaries may still change
-- production-readiness is not claimed yet
-- release planning is driven by test coverage, documentation quality, and stable behavior under a documented measurement profile
+Flowtext bridges the gap. One `layoutTree()` call returns positions, sizes, and wrapped text lines for your entire UI tree.
 
-## Problem
+```
+Input tree (JSON)  -->  layoutTree()  -->  Positions + line breaks
+                         Yoga + Pretext       ready for any renderer
+```
 
-Non-DOM renderers still need two things:
+## Live Demo
 
-- reliable box layout
-- reliable paragraph measurement
+**[flowtext demo](https://kim62210.github.io/flowtext/)** -- interactive showcase with SVG, Canvas, and ASCII rendering side by side.
 
-Yoga already solves box layout well. Pretext already solves paragraph measurement and line layout well. Flowtext focuses on the integration layer between them so applications do not have to rebuild the same width-constraint, measure-callback, and result-merging logic repeatedly.
+Run locally:
 
-## Scope
-
-The first release line focuses on one narrow problem:
-
-> given a tree of containers and text, return predictable layout output without using DOM measurement APIs.
-
-### In scope for the first release line
-
-- renderer-neutral layout tree input
-- Yoga-backed structural layout
-- Pretext-backed paragraph measurement and line extraction
-- explicit validation and public error codes
-- a thin demo that visualizes engine output without turning Flowtext into a renderer framework
-- official `yoga-layout` initialization and lifecycle rules documented as part of the public runtime contract
-
-### Out of scope for the first release line
-
-- rich text editing
-- cursor, selection, or composition management
-- full typography or shaping guarantees across every runtime
-- renderer-specific adapters as first-class core features
-- browser-independent pixel identity guarantees
-- universal server-side parity across all hosts
+```sh
+pnpm demo:dev
+```
 
 ## Installation
-
-When the package is publicly published, install it with:
 
 ```sh
 pnpm add flowtext
 ```
 
-At the current stage, Flowtext is intended for projects that can satisfy the runtime assumptions documented in `docs/architecture/measurement-profile.md`.
-
-## Minimal Usage
+## Quick Start
 
 ```ts
 import { layoutTree } from 'flowtext';
@@ -67,102 +44,104 @@ const result = await layoutTree(
   {
     id: 'root',
     type: 'view',
-    style: {
-      width: 320,
-      flexDirection: 'column',
-    },
+    style: { width: 320, flexDirection: 'column', padding: 16 },
     children: [
       {
         id: 'title',
         type: 'text',
-        text: 'Flowtext turns Yoga and Pretext into one layout tree.',
-        style: {
-          fontFamily: 'Inter',
-          fontSize: 16,
-          lineHeight: 24,
-        },
+        text: 'Hello from Flowtext',
+        style: { fontFamily: 'sans-serif', fontSize: 16, lineHeight: 24 },
       },
     ],
   },
   { width: 320 },
 );
 
-console.log(result.children?.[0]?.lines);
+// result.children[0].lines => [{ text: 'Hello from Flowtext', x: 0, y: 0, width: ..., height: 24 }]
 ```
 
-For a more complete walkthrough, see `docs/api.md` and `docs/examples-smoke.md`.
+### Render to Canvas
 
-## Demo
+```ts
+const ctx = canvas.getContext('2d');
 
-The repository includes an interactive playground under `apps/demo/`.
+function draw(node) {
+  ctx.save();
+  ctx.translate(node.x, node.y);
+  ctx.strokeRect(0, 0, node.width, node.height);
+  if (node.lines) {
+    for (const line of node.lines) {
+      ctx.fillText(line.text, line.x, line.y + line.height);
+    }
+  }
+  node.children?.forEach(draw);
+  ctx.restore();
+}
 
-**Features:**
-- JSON editor + visual property panel for real-time layout editing
-- Same layout tree rendered simultaneously as **SVG**, **Canvas**, and **ASCII**
-- Three curated presets: Playground, Text Reflow, OG Image
-
-**Run locally:**
-
-```sh
-pnpm demo:dev
+draw(result);
 ```
+
+### Render to SVG
+
+```ts
+function toSvg(node) {
+  let svg = `<g transform="translate(${node.x},${node.y})">`;
+  svg += `<rect width="${node.width}" height="${node.height}" fill="none" stroke="#ccc"/>`;
+  if (node.lines) {
+    for (const line of node.lines) {
+      svg += `<text x="${line.x}" y="${line.y + line.height}">${line.text}</text>`;
+    }
+  }
+  node.children?.forEach(c => { svg += toSvg(c); });
+  return svg + '</g>';
+}
+```
+
+### Server-side (Node.js)
+
+```ts
+import { layoutTree } from 'flowtext';
+
+// No DOM, no browser -- works in Node.js, Deno, Bun, Workers
+const result = await layoutTree(ogImageTree, { width: 1200, height: 630 });
+// Use result to generate an image with sharp, canvas, or any renderer
+```
+
+## API
+
+### `layoutTree(root, constraints, options?)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `root` | `FlowtextNode` | Layout tree with `view` and `text` nodes |
+| `constraints` | `{ width?, height? }` | Available space |
+| `options.textAdapter` | `TextMeasurementAdapter` | Custom text measurer (default: Pretext) |
+
+Returns `Promise<FlowtextLayoutResult>` with `x`, `y`, `width`, `height`, and `lines` for each node.
+
+### Supported Styles
+
+**Layout:** `flexDirection`, `justifyContent`, `alignItems`, `alignSelf`, `flexGrow`, `flexShrink`, `width`, `height`, `minWidth`, `maxWidth`, `minHeight`, `maxHeight`, `padding`, `margin`
+
+**Text:** `fontSize`, `lineHeight`, `fontFamily`, `fontWeight`, `whiteSpace`
+
+Full API reference: [`docs/api.md`](./docs/api.md)
+
+## Status
+
+Flowtext is **experimental** and **pre-1.0**. Breaking changes are expected. See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Design Principles
 
-1. **Small core first**
-   Keep the public surface narrow and maintainable.
-2. **Renderer agnostic**
-   Flowtext computes layout. Rendering stays outside the core package.
-3. **No DOM measurement dependency**
-   Flowtext avoids browser layout probes such as `getBoundingClientRect()`.
-4. **Honest limits**
-   The project documents runtime, font, and locale constraints instead of hiding them.
-5. **Open-source maintainability**
-   Documentation, tests, and release policy matter as much as features.
+1. **Small core** -- narrow public surface, one function entry point
+2. **Renderer agnostic** -- computes layout, never renders
+3. **No DOM dependency** -- no `getBoundingClientRect()`, no `document`
+4. **Honest limits** -- documents runtime/font/locale constraints explicitly
 
-## Measurement Profile
+## Contributing
 
-Flowtext promises predictable output only within a documented measurement profile. That profile includes the runtime, font configuration, locale, engine version, and output rounding policy. See `docs/architecture/measurement-profile.md`.
+See [CONTRIBUTING.md](./CONTRIBUTING.md). All contributions welcome.
 
-## Runtime Notes
+## License
 
-- the initial runtime target will use the official `yoga-layout` package rather than an unofficial Yoga fork
-- Yoga initialization should be treated as an async runtime concern
-- Yoga node and config disposal must be handled explicitly
-- Pretext requires font and line-height inputs that match the actual rendering environment
-
-## Governance
-
-- Contribution guide: `CONTRIBUTING.md`
-- Code of conduct: `CODE_OF_CONDUCT.md`
-- Security policy: `SECURITY.md`
-- Changelog: `CHANGELOG.md`
-
-## Release Philosophy
-
-Flowtext will only consider a `1.0.0` release when all of the following are true:
-
-- core APIs are documented and intentionally scoped
-- the measurement profile and known limitations are explicit
-- tests, build, and type checks pass consistently
-- the public error model is stable enough to support semver commitments
-
-## Roadmap Shape
-
-The project roadmap is milestone-based rather than promise-heavy:
-
-1. OSS foundation and contracts
-2. package scaffold and public types
-3. Yoga-backed structural layout
-4. Pretext measurement bridge
-5. unified public layout results
-6. validation and demo
-7. release-quality docs and verification
-
-## Development Notes
-
-- All code, comments, docs, and examples are kept in English.
-- Work is committed in small feature- or module-sized units.
-- `README.md` and `CHANGELOG.md` are reviewed at least every 10 commits during active development, and updated whenever public-facing behavior has changed.
-
-Implementation details and approved planning artifacts live in `docs/specs` and `docs/plans`.
+[MIT](./LICENSE)
