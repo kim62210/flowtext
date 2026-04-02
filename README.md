@@ -94,11 +94,18 @@ For a more complete walkthrough, see `docs/api.md` and `docs/examples-smoke.md`.
 
 ## Demo
 
-The repository includes a thin development demo under `apps/demo/`.
+The repository includes an interactive playground under `apps/demo/`.
 
-- `apps/demo/src/main.ts` renders Flowtext output as SVG
-- `apps/demo/src/browser.ts` mounts that SVG into the demo page
-- `apps/demo/index.html` is a minimal demo entry intended for a TypeScript-capable dev server, not a production-ready app shell
+**Features:**
+- JSON editor + visual property panel for real-time layout editing
+- Same layout tree rendered simultaneously as **SVG**, **Canvas**, and **ASCII**
+- Three curated presets: Playground, Text Reflow, OG Image
+
+**Run locally:**
+
+```sh
+pnpm demo:dev
+```
 
 ## Design Principles
 

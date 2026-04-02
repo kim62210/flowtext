@@ -15,5 +15,10 @@
   "include": [
     "packages/**/*.ts",
     "apps/**/*.ts"
+  ],
+  "exclude": [
+    "**/dist/**",
+    "**/node_modules/**",
+    "apps/demo/vite.config.ts"
   ]
 }
