@@ -10,6 +10,9 @@ export class AsciiRenderer implements Renderer {
 
   mount(container: HTMLElement): void {
     this.pre = document.createElement('pre');
+    this.pre.style.overflow = 'hidden';
+    this.pre.style.width = '100%';
+    this.pre.style.height = '100%';
     container.appendChild(this.pre);
   }
 
