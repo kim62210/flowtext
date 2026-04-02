@@ -20,16 +20,6 @@ interface NodeLayout {
   h: number;
   parentId: string | null;
   childIndex: number;
-  siblingCount: number;
-}
-
-function escapeXml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
 }
 
 function createEl(tag: string): SVGElement {
@@ -42,15 +32,14 @@ function collectNodeLayouts(
   offsetY: number,
   parentId: string | null,
   childIndex: number,
-  siblingCount: number,
   map: Map<string, NodeLayout>,
 ) {
   const absX = offsetX + result.x;
   const absY = offsetY + result.y;
-  map.set(result.id, { id: result.id, absX, absY, w: result.width, h: result.height, parentId, childIndex, siblingCount });
+  map.set(result.id, { id: result.id, absX, absY, w: result.width, h: result.height, parentId, childIndex });
   if (result.children) {
     for (let i = 0; i < result.children.length; i++) {
-      collectNodeLayouts(result.children[i], absX, absY, result.id, i, result.children.length, map);
+      collectNodeLayouts(result.children[i], absX, absY, result.id, i, map);
     }
   }
 }
@@ -58,28 +47,27 @@ function collectNodeLayouts(
 function renderNode(
   result: FlowtextLayoutResult,
   selectedId: string | null,
-  dragState: DragState | null,
+  draggingId: string | null,
 ): SVGElement {
   const g = createEl('g') as SVGGElement;
   g.setAttribute('transform', `translate(${result.x}, ${result.y})`);
 
   const isSelected = result.id === selectedId;
-  const isDragging = dragState?.nodeId === result.id;
+  const isDragging = result.id === draggingId;
 
-  // bounding rect
   const rect = createEl('rect') as SVGRectElement;
   rect.setAttribute('x', '0');
   rect.setAttribute('y', '0');
   rect.setAttribute('width', String(result.width));
   rect.setAttribute('height', String(result.height));
   rect.setAttribute('fill', isSelected ? 'rgba(99,102,241,0.05)' : 'transparent');
-  rect.setAttribute('stroke', isSelected ? '#6366f1' : '#818cf8');
-  rect.setAttribute('stroke-width', isSelected ? '2' : '1');
+  rect.setAttribute('stroke', isDragging ? '#6366f1' : isSelected ? '#6366f1' : '#818cf8');
+  rect.setAttribute('stroke-width', isDragging ? '2.5' : isSelected ? '2' : '1');
   rect.setAttribute('data-node-id', result.id);
 
   if (isDragging) {
-    rect.setAttribute('opacity', '0.3');
-    rect.setAttribute('stroke-dasharray', '4 2');
+    rect.setAttribute('stroke-dasharray', '6 3');
+    rect.setAttribute('fill', 'rgba(99,102,241,0.08)');
   }
 
   g.appendChild(rect);
@@ -91,25 +79,22 @@ function renderNode(
   label.setAttribute('font-size', '9');
   label.setAttribute('font-family', "'Inter', system-ui, sans-serif");
   label.setAttribute('font-weight', '500');
-  label.setAttribute('fill', isSelected ? '#6366f1' : '#818cf8');
+  label.setAttribute('fill', isSelected || isDragging ? '#6366f1' : '#818cf8');
   label.setAttribute('pointer-events', 'none');
   label.textContent = result.id;
-  if (isDragging) label.setAttribute('opacity', '0.3');
   g.appendChild(label);
 
   // text lines
   if (result.lines && result.lines.length > 0) {
     for (const line of result.lines) {
-      const lineEl = renderLine(line);
-      if (isDragging) lineEl.setAttribute('opacity', '0.3');
-      g.appendChild(lineEl);
+      g.appendChild(renderLine(line));
     }
   }
 
   // children
   if (result.children) {
     for (const child of result.children) {
-      g.appendChild(renderNode(child, selectedId, dragState));
+      g.appendChild(renderNode(child, selectedId, draggingId));
     }
   }
 
@@ -128,13 +113,16 @@ function renderLine(line: FlowtextLayoutLine): SVGElement {
   return textEl;
 }
 
+type DragMode = 'move' | 'resize-right' | 'resize-bottom' | 'resize-corner';
+
 interface DragState {
   nodeId: string;
-  mode: 'move' | 'resize-right' | 'resize-bottom' | 'resize-corner';
+  mode: DragMode;
   startMouseX: number;
   startMouseY: number;
   startW: number;
   startH: number;
+  lastReorderIndex: number;
 }
 
 export class SvgRenderer implements Renderer {
@@ -144,9 +132,6 @@ export class SvgRenderer implements Renderer {
   private lastResult: FlowtextLayoutResult | null = null;
   private nodeLayouts = new Map<string, NodeLayout>();
   private dragState: DragState | null = null;
-  private ghostEl: SVGGElement | null = null;
-  private dropIndicator: SVGLineElement | null = null;
-  private pendingDropIndex: number | null = null;
 
   setInteraction(interaction: SvgInteraction) {
     this.interaction = interaction;
@@ -168,16 +153,12 @@ export class SvgRenderer implements Renderer {
     if (!this.svg) return;
     this.lastResult = result;
 
-    // Rebuild node layout map
     this.nodeLayouts.clear();
-    collectNodeLayouts(result, 0, 0, null, 0, 1, this.nodeLayouts);
+    collectNodeLayouts(result, 0, 0, null, 0, this.nodeLayouts);
 
-    // Clear all except during active drag (keep ghost/indicator)
     while (this.svg.firstChild) {
       this.svg.removeChild(this.svg.firstChild);
     }
-
-    const scale = computeScale(result, viewport);
 
     this.svg.setAttribute('width', String(viewport.width));
     this.svg.setAttribute('height', String(viewport.height));
@@ -185,17 +166,13 @@ export class SvgRenderer implements Renderer {
 
     const rootG = createEl('g') as SVGGElement;
     rootG.appendChild(
-      renderNode(result, this.interaction.selectedNodeId ?? null, this.dragState),
+      renderNode(
+        result,
+        this.interaction.selectedNodeId ?? null,
+        this.dragState?.mode === 'move' ? this.dragState.nodeId : null,
+      ),
     );
     this.svg.appendChild(rootG);
-
-    // Re-attach ghost and drop indicator if dragging
-    if (this.dragState && this.ghostEl) {
-      this.svg.appendChild(this.ghostEl);
-    }
-    if (this.dropIndicator) {
-      this.svg.appendChild(this.dropIndicator);
-    }
   }
 
   private toSvg(clientX: number, clientY: number): { x: number; y: number } {
@@ -210,7 +187,6 @@ export class SvgRenderer implements Renderer {
   }
 
   private hitTest(svgX: number, svgY: number): { nodeId: string; edge: string | null } | null {
-    // Find the deepest node containing the point
     let best: NodeLayout | null = null;
     for (const layout of this.nodeLayouts.values()) {
       if (
@@ -226,7 +202,6 @@ export class SvgRenderer implements Renderer {
     }
     if (!best) return null;
 
-    // Check if near edge
     const rx = svgX - best.absX;
     const ry = svgY - best.absY;
     const nearRight = best.w - rx < EDGE_THRESHOLD;
@@ -241,102 +216,58 @@ export class SvgRenderer implements Renderer {
 
   private onHoverCursor = (e: MouseEvent) => {
     if (this.dragState) return;
-    const svg = this.svg;
-    if (!svg) return;
+    if (!this.svg) return;
 
     const { x, y } = this.toSvg(e.clientX, e.clientY);
     const hit = this.hitTest(x, y);
 
     if (!hit) {
-      svg.style.cursor = 'default';
+      this.svg.style.cursor = 'default';
       return;
     }
 
-    if (hit.edge === 'corner') svg.style.cursor = 'nwse-resize';
-    else if (hit.edge === 'right') svg.style.cursor = 'ew-resize';
-    else if (hit.edge === 'bottom') svg.style.cursor = 'ns-resize';
-    else svg.style.cursor = 'grab';
+    if (hit.edge === 'corner') this.svg.style.cursor = 'nwse-resize';
+    else if (hit.edge === 'right') this.svg.style.cursor = 'ew-resize';
+    else if (hit.edge === 'bottom') this.svg.style.cursor = 'ns-resize';
+    else this.svg.style.cursor = 'grab';
   };
 
   private onMouseDown = (e: MouseEvent) => {
-    if (e.button !== 0) return;
-    const svg = this.svg;
-    if (!svg) return;
+    if (e.button !== 0 || !this.svg) return;
 
     const { x, y } = this.toSvg(e.clientX, e.clientY);
     const hit = this.hitTest(x, y);
     if (!hit) return;
 
     e.preventDefault();
-
-    // Select the node
     this.interaction.onNodeClick?.(hit.nodeId);
 
     const layout = this.nodeLayouts.get(hit.nodeId);
     if (!layout) return;
 
-    if (hit.edge) {
-      // Edge drag = resize
-      const mode = hit.edge === 'corner' ? 'resize-corner'
-        : hit.edge === 'right' ? 'resize-right'
-        : 'resize-bottom';
+    const mode: DragMode = hit.edge === 'corner' ? 'resize-corner'
+      : hit.edge === 'right' ? 'resize-right'
+      : hit.edge === 'bottom' ? 'resize-bottom'
+      : 'move';
 
-      this.dragState = {
-        nodeId: hit.nodeId,
-        mode: mode as DragState['mode'],
-        startMouseX: x,
-        startMouseY: y,
-        startW: layout.w,
-        startH: layout.h,
-      };
-    } else {
-      // Body drag = move/reorder
-      this.dragState = {
-        nodeId: hit.nodeId,
-        mode: 'move',
-        startMouseX: x,
-        startMouseY: y,
-        startW: layout.w,
-        startH: layout.h,
-      };
-      svg.style.cursor = 'grabbing';
-      this.createGhost(layout);
+    this.dragState = {
+      nodeId: hit.nodeId,
+      mode,
+      startMouseX: x,
+      startMouseY: y,
+      startW: layout.w,
+      startH: layout.h,
+      lastReorderIndex: layout.childIndex,
+    };
+
+    if (mode === 'move') {
+      this.svg.style.cursor = 'grabbing';
     }
 
     document.addEventListener('mousemove', this.onDrag);
     document.addEventListener('mouseup', this.onDragEnd);
     document.body.style.userSelect = 'none';
   };
-
-  private createGhost(layout: NodeLayout) {
-    if (!this.svg) return;
-    const ghost = createEl('g') as SVGGElement;
-    ghost.setAttribute('pointer-events', 'none');
-
-    const rect = createEl('rect') as SVGRectElement;
-    rect.setAttribute('width', String(layout.w));
-    rect.setAttribute('height', String(layout.h));
-    rect.setAttribute('fill', 'rgba(99,102,241,0.12)');
-    rect.setAttribute('stroke', '#6366f1');
-    rect.setAttribute('stroke-width', '2');
-    rect.setAttribute('stroke-dasharray', '6 3');
-    rect.setAttribute('rx', '4');
-    ghost.appendChild(rect);
-
-    const label = createEl('text') as SVGTextElement;
-    label.setAttribute('x', '6');
-    label.setAttribute('y', '16');
-    label.setAttribute('font-size', '11');
-    label.setAttribute('font-weight', '600');
-    label.setAttribute('font-family', "'Inter', system-ui, sans-serif");
-    label.setAttribute('fill', '#6366f1');
-    label.textContent = layout.id;
-    ghost.appendChild(label);
-
-    ghost.setAttribute('transform', `translate(${layout.absX}, ${layout.absY})`);
-    this.ghostEl = ghost;
-    this.svg.appendChild(ghost);
-  }
 
   private onDrag = (e: MouseEvent) => {
     if (!this.dragState || !this.svg) return;
@@ -345,28 +276,16 @@ export class SvgRenderer implements Renderer {
     const dy = y - this.dragState.startMouseY;
 
     if (this.dragState.mode === 'move') {
-      this.handleMoveDrag(x, y, dx, dy);
+      this.handleMoveDrag(x, y);
     } else {
       this.handleResizeDrag(dx, dy);
     }
   };
 
-  private handleMoveDrag(svgX: number, svgY: number, dx: number, dy: number) {
-    const layout = this.nodeLayouts.get(this.dragState!.nodeId);
-    if (!layout || !this.svg) return;
-
-    // Move ghost
-    if (this.ghostEl) {
-      this.ghostEl.setAttribute(
-        'transform',
-        `translate(${layout.absX + dx}, ${layout.absY + dy})`,
-      );
-    }
-
-    // Find drop target among siblings
-    if (layout.parentId === null) return; // can't reorder root
-    const parentLayout = this.nodeLayouts.get(layout.parentId);
-    if (!parentLayout) return;
+  private handleMoveDrag(svgX: number, svgY: number) {
+    const ds = this.dragState!;
+    const layout = this.nodeLayouts.get(ds.nodeId);
+    if (!layout || layout.parentId === null) return;
 
     // Find siblings
     const siblings: NodeLayout[] = [];
@@ -374,11 +293,13 @@ export class SvgRenderer implements Renderer {
       if (nl.parentId === layout.parentId) siblings.push(nl);
     }
     siblings.sort((a, b) => a.childIndex - b.childIndex);
+    if (siblings.length < 2) return;
 
-    // Determine insert index based on current mouse position
+    // Determine layout direction
+    const isVertical = this.isVerticalLayout(siblings);
+
+    // Compute target index
     let newIndex = siblings.length;
-    const isVertical = this.isVerticalParent(layout.parentId);
-
     for (let i = 0; i < siblings.length; i++) {
       const sib = siblings[i];
       const midPoint = isVertical
@@ -392,80 +313,18 @@ export class SvgRenderer implements Renderer {
       }
     }
 
-    this.pendingDropIndex = newIndex;
-    this.updateDropIndicator(siblings, newIndex, isVertical, parentLayout);
+    // Only fire reorder if index actually changed
+    if (newIndex !== ds.lastReorderIndex) {
+      ds.lastReorderIndex = newIndex;
+      this.interaction.onNodeReorder?.(ds.nodeId, newIndex);
+    }
   }
 
-  private isVerticalParent(parentId: string): boolean {
-    // Check if parent's children are laid out vertically
-    const children: NodeLayout[] = [];
-    for (const nl of this.nodeLayouts.values()) {
-      if (nl.parentId === parentId) children.push(nl);
-    }
-    if (children.length < 2) return true;
-    children.sort((a, b) => a.childIndex - b.childIndex);
-    // If y changes more than x, it's vertical
-    const dy = Math.abs(children[1].absY - children[0].absY);
-    const dx = Math.abs(children[1].absX - children[0].absX);
+  private isVerticalLayout(siblings: NodeLayout[]): boolean {
+    if (siblings.length < 2) return true;
+    const dy = Math.abs(siblings[1].absY - siblings[0].absY);
+    const dx = Math.abs(siblings[1].absX - siblings[0].absX);
     return dy >= dx;
-  }
-
-  private updateDropIndicator(
-    siblings: NodeLayout[],
-    insertIndex: number,
-    isVertical: boolean,
-    parentLayout: NodeLayout,
-  ) {
-    if (!this.svg) return;
-
-    // Remove old indicator
-    if (this.dropIndicator) {
-      this.dropIndicator.remove();
-      this.dropIndicator = null;
-    }
-
-    const line = createEl('line') as SVGLineElement;
-    line.setAttribute('stroke', '#6366f1');
-    line.setAttribute('stroke-width', '3');
-    line.setAttribute('stroke-linecap', 'round');
-    line.setAttribute('pointer-events', 'none');
-
-    if (isVertical) {
-      let lineY: number;
-      if (insertIndex === 0 && siblings.length > 0) {
-        lineY = siblings[0].absY - 1;
-      } else if (insertIndex >= siblings.length) {
-        const last = siblings[siblings.length - 1];
-        lineY = last.absY + last.h + 1;
-      } else {
-        const prev = siblings[insertIndex - 1];
-        const curr = siblings[insertIndex];
-        lineY = (prev.absY + prev.h + curr.absY) / 2;
-      }
-      line.setAttribute('x1', String(parentLayout.absX + 4));
-      line.setAttribute('x2', String(parentLayout.absX + parentLayout.w - 4));
-      line.setAttribute('y1', String(lineY));
-      line.setAttribute('y2', String(lineY));
-    } else {
-      let lineX: number;
-      if (insertIndex === 0 && siblings.length > 0) {
-        lineX = siblings[0].absX - 1;
-      } else if (insertIndex >= siblings.length) {
-        const last = siblings[siblings.length - 1];
-        lineX = last.absX + last.w + 1;
-      } else {
-        const prev = siblings[insertIndex - 1];
-        const curr = siblings[insertIndex];
-        lineX = (prev.absX + prev.w + curr.absX) / 2;
-      }
-      line.setAttribute('x1', String(lineX));
-      line.setAttribute('x2', String(lineX));
-      line.setAttribute('y1', String(parentLayout.absY + 4));
-      line.setAttribute('y2', String(parentLayout.absY + parentLayout.h - 4));
-    }
-
-    this.dropIndicator = line;
-    this.svg.appendChild(line);
   }
 
   private handleResizeDrag(dx: number, dy: number) {
@@ -488,28 +347,14 @@ export class SvgRenderer implements Renderer {
     document.removeEventListener('mouseup', this.onDragEnd);
     document.body.style.userSelect = '';
 
-    if (this.dragState?.mode === 'move' && this.pendingDropIndex !== null) {
-      const layout = this.nodeLayouts.get(this.dragState.nodeId);
-      if (layout && this.pendingDropIndex !== layout.childIndex) {
-        this.interaction.onNodeReorder?.(this.dragState.nodeId, this.pendingDropIndex);
-      }
-    }
-
-    // Cleanup
-    this.ghostEl?.remove();
-    this.ghostEl = null;
-    this.dropIndicator?.remove();
-    this.dropIndicator = null;
     this.dragState = null;
-    this.pendingDropIndex = null;
-
     if (this.svg) this.svg.style.cursor = 'default';
 
-    // Re-render to clear drag visual state
-    if (this.lastResult) {
+    // Re-render to clear drag visual state (dashed border)
+    if (this.lastResult && this.container) {
       const viewport: ViewportSize = {
-        width: this.container?.clientWidth ?? 0,
-        height: this.container?.clientHeight ?? 0,
+        width: this.container.clientWidth,
+        height: this.container.clientHeight,
       };
       this.render(this.lastResult, viewport);
     }

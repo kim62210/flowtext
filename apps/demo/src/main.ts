@@ -39,8 +39,7 @@ function updateSvgInteraction() {
       state.setSelectedNodeId(nodeId);
     },
     onNodeResize(nodeId, width, height) {
-      state.updateStyle(nodeId, 'width', width);
-      state.updateStyle(nodeId, 'height', height);
+      state.updateStyles(nodeId, { width, height });
     },
     onNodeReorder(nodeId, newIndex) {
       state.reorderChild(nodeId, newIndex);
