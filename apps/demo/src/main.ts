@@ -3,6 +3,7 @@ import { SvgRenderer } from './renderers/svg-renderer';
 import { CanvasRenderer } from './renderers/canvas-renderer';
 import { AsciiRenderer } from './renderers/ascii-renderer';
 import type { Renderer, ViewportSize } from './renderers/types';
+import { getLocale, setLocale } from './i18n';
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -184,9 +185,21 @@ function initOgDemo() {
   return update();
 }
 
+// ── Language Toggle ──────────────────────────────────────
+
+function initLangToggle() {
+  const btn = document.getElementById('lang-toggle')!;
+  btn.addEventListener('click', () => {
+    const next = getLocale() === 'en' ? 'ko' : 'en';
+    setLocale(next);
+    btn.textContent = next === 'en' ? 'KO' : 'EN';
+  });
+}
+
 // ── Boot ─────────────────────────────────────────────────
 
 async function boot() {
+  initLangToggle();
   await Promise.all([
     initReflowDemo(),
     initReorderDemo(),

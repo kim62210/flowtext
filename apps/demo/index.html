@@ -10,22 +10,34 @@
     <main>
       <!-- Hero -->
       <header class="hero">
-        <p class="eyebrow">Demos</p>
+        <div class="hero-top">
+          <p class="eyebrow" data-i18n="hero.eyebrow">Demos</p>
+          <button class="lang-toggle" id="lang-toggle">KO</button>
+        </div>
         <h1>Flowtext</h1>
-        <p class="tagline">DOM-free layout for Canvas, WebGL, SVG, and server-side rendering.<br>One layout tree. Every renderer.</p>
+        <p class="tagline" data-i18n="hero.tagline">DOM-free layout for Canvas, WebGL, SVG, and server-side rendering. One layout tree, every renderer.</p>
       </header>
 
       <!-- Demo 1: Text Reflow -->
       <section class="demo-section" id="demo-reflow">
         <div class="demo-header">
-          <h2>Text Reflow</h2>
-          <p class="demo-desc">Drag the slider to resize the container. The same layout result renders to SVG, Canvas, and ASCII simultaneously.</p>
+          <h2 data-i18n="reflow.title">Text Reflow</h2>
+          <div class="demo-explainer">
+            <div class="explainer-block explainer-problem">
+              <h3 data-i18n="reflow.problem">The Problem</h3>
+              <p data-i18n="reflow.problem.desc">DOM-based layout requires the browser to measure text. Outside the browser -- in Canvas, WebGL, or on the server -- there is no DOM. You cannot call getBoundingClientRect().</p>
+            </div>
+            <div class="explainer-block explainer-solution">
+              <h3 data-i18n="reflow.solution">What Flowtext Does</h3>
+              <p data-i18n="reflow.solution.desc">Flowtext combines Yoga (flexbox) with Pretext (text measurement) to compute layout entirely in JavaScript. Drag the slider -- the same layout result renders to SVG, Canvas, and ASCII simultaneously.</p>
+            </div>
+          </div>
         </div>
         <div class="demo-control">
-          <label for="reflow-width">Container width: <strong id="reflow-width-value">360</strong>px</label>
+          <label><span data-i18n="reflow.slider.label">Container width:</span> <strong id="reflow-width-value">360</strong>px</label>
           <input type="range" id="reflow-width" min="160" max="600" value="360" />
         </div>
-        <div class="demo-renderers three-up" id="reflow-renderers">
+        <div class="demo-renderers three-up">
           <div class="renderer-card">
             <span class="renderer-tag tag-svg">SVG</span>
             <div class="renderer-body" id="reflow-svg"></div>
@@ -44,12 +56,21 @@
       <!-- Demo 2: Flex Reorder -->
       <section class="demo-section" id="demo-reorder">
         <div class="demo-header">
-          <h2>Flex Reorder</h2>
-          <p class="demo-desc">Drag any element in the SVG to reorder it. Watch all three renderers update in real time.</p>
+          <h2 data-i18n="reorder.title">Flex Reorder</h2>
+          <div class="demo-explainer">
+            <div class="explainer-block explainer-problem">
+              <h3 data-i18n="reorder.problem">The Problem</h3>
+              <p data-i18n="reorder.problem.desc">Building interactive layouts in Canvas or WebGL requires re-running the layout algorithm on every change. Most engines make this prohibitively slow.</p>
+            </div>
+            <div class="explainer-block explainer-solution">
+              <h3 data-i18n="reorder.solution">What Flowtext Does</h3>
+              <p data-i18n="reorder.solution.desc">Flowtext recomputes layout fast enough for real-time interaction. Drag any element to reorder it -- all three renderers update instantly.</p>
+            </div>
+          </div>
         </div>
-        <div class="demo-renderers three-up" id="reorder-renderers">
+        <div class="demo-renderers three-up">
           <div class="renderer-card">
-            <span class="renderer-tag tag-svg">SVG <span class="tag-hint">drag here</span></span>
+            <span class="renderer-tag tag-svg">SVG <span class="tag-hint" data-i18n="reorder.hint">drag here</span></span>
             <div class="renderer-body" id="reorder-svg"></div>
           </div>
           <div class="renderer-card">
@@ -66,13 +87,22 @@
       <!-- Demo 3: OG Image -->
       <section class="demo-section" id="demo-og">
         <div class="demo-header">
-          <h2>OG Image</h2>
-          <p class="demo-desc">Type a title below. Flowtext computes the layout for a 1200 x 630 social card without the DOM.</p>
+          <h2 data-i18n="og.title">OG Image</h2>
+          <div class="demo-explainer">
+            <div class="explainer-block explainer-problem">
+              <h3 data-i18n="og.problem">The Problem</h3>
+              <p data-i18n="og.problem.desc">Generating social media cards on the server typically requires a headless browser just to lay out text. That is slow, resource-heavy, and fragile.</p>
+            </div>
+            <div class="explainer-block explainer-solution">
+              <h3 data-i18n="og.solution">What Flowtext Does</h3>
+              <p data-i18n="og.solution.desc">Flowtext computes a 1200 x 630 card layout in pure JS -- no browser needed. Type a title below to see the layout update in real time.</p>
+            </div>
+          </div>
         </div>
         <div class="demo-control">
-          <input type="text" id="og-title-input" value="DOM-Free Layout for Canvas, WebGL, and Server-Side Rendering" placeholder="Type a title..." />
+          <input type="text" id="og-title-input" value="DOM-Free Layout for Canvas, WebGL, and Server-Side Rendering" data-i18n-placeholder="og.input.placeholder" placeholder="Type a title..." />
         </div>
-        <div class="demo-renderers three-up" id="og-renderers">
+        <div class="demo-renderers three-up">
           <div class="renderer-card">
             <span class="renderer-tag tag-svg">SVG</span>
             <div class="renderer-body renderer-body--og" id="og-svg"></div>
