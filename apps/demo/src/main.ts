@@ -110,7 +110,7 @@ function initReorderDemo() {
     selectedNodeId: null,
     onNodeClick(nodeId) {
       triple.svg.setInteraction({
-        ...triple.svg['interaction'],
+        ...triple.svg.interaction,
         selectedNodeId: nodeId,
       });
       if (lastResult) renderAll(triple.all, lastResult);
@@ -122,14 +122,6 @@ function initReorderDemo() {
       const [child] = children.splice(oldIndex, 1);
       const adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
       children.splice(adjusted, 0, child);
-      computeAndRender(node, { width: 300 }, triple.all).then((r) => { lastResult = r; });
-    },
-    onNodeResize(nodeId, w, h) {
-      const target = node.children?.find((c) => c.id === nodeId) ?? (nodeId === 'root' ? node : null);
-      if (!target) return;
-      if (!target.style) target.style = {};
-      target.style.width = w;
-      target.style.height = h;
       computeAndRender(node, { width: 300 }, triple.all).then((r) => { lastResult = r; });
     },
   });
