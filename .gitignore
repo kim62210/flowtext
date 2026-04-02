@@ -3,5 +3,6 @@
 progress.txt
 node_modules/
 packages/*/dist/
+apps/demo/dist/
 coverage/
 .superpowers/

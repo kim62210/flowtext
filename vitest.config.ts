@@ -17,7 +17,6 @@ export default defineConfig({
       },
       include: [
         'packages/flowtext/src/**/*.ts',
-        'apps/demo/src/**/*.ts',
       ],
       exclude: [
         ...configDefaults.exclude,
