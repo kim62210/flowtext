@@ -118,7 +118,7 @@ function initReorderDemo() {
     },
     onNodeReorder(nodeId, newIndex) {
       const children = node.children!;
-      const oldIndex = children.findIndex((c) => c.id === nodeId);
+      const oldIndex = children.findIndex((c: { id: string }) => c.id === nodeId);
       if (oldIndex === -1) return;
       const [child] = children.splice(oldIndex, 1);
       const adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;

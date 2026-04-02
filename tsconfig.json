@@ -10,7 +10,10 @@
     "resolveJsonModule": true,
     "types": [
       "vitest/globals"
-    ]
+    ],
+    "paths": {
+      "flowtext": ["./packages/flowtext/src/index.ts"]
+    }
   },
   "include": [
     "packages/**/*.ts",
