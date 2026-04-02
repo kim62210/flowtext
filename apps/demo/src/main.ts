@@ -31,29 +31,27 @@ svgRenderer.mount(svgContainer);
 canvasRenderer.mount(canvasContainer);
 asciiRenderer.mount(asciiContainer);
 
-// --- SVG Interactive: click to select, drag to resize ---
-svgRenderer.setInteraction({
-  selectedNodeId: state.getSelectedNodeId(),
-  onNodeClick(nodeId) {
-    state.setSelectedNodeId(nodeId);
-  },
-  onNodeResize(nodeId, width, height) {
-    state.updateStyle(nodeId, 'width', width);
-    state.updateStyle(nodeId, 'height', height);
-  },
-});
-
-// Keep SVG interaction in sync with selection changes
-state.addEventListener('selection-change', () => {
+// --- SVG Interactive: click to select, drag to move/resize ---
+function updateSvgInteraction() {
   svgRenderer.setInteraction({
-    onNodeClick: (nodeId: string) => state.setSelectedNodeId(nodeId),
-    onNodeResize: (nodeId: string, width: number, height: number) => {
+    selectedNodeId: state.getSelectedNodeId(),
+    onNodeClick(nodeId) {
+      state.setSelectedNodeId(nodeId);
+    },
+    onNodeResize(nodeId, width, height) {
       state.updateStyle(nodeId, 'width', width);
       state.updateStyle(nodeId, 'height', height);
     },
-    selectedNodeId: state.getSelectedNodeId(),
+    onNodeReorder(nodeId, newIndex) {
+      state.reorderChild(nodeId, newIndex);
+    },
   });
-  // Re-render to show updated selection
+}
+
+updateSvgInteraction();
+
+state.addEventListener('selection-change', () => {
+  updateSvgInteraction();
   const result = state.getResult();
   if (result) renderAll(result);
 });
