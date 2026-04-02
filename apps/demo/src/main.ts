@@ -31,6 +31,33 @@ svgRenderer.mount(svgContainer);
 canvasRenderer.mount(canvasContainer);
 asciiRenderer.mount(asciiContainer);
 
+// --- SVG Interactive: click to select, drag to resize ---
+svgRenderer.setInteraction({
+  selectedNodeId: state.getSelectedNodeId(),
+  onNodeClick(nodeId) {
+    state.setSelectedNodeId(nodeId);
+  },
+  onNodeResize(nodeId, width, height) {
+    state.updateStyle(nodeId, 'width', width);
+    state.updateStyle(nodeId, 'height', height);
+  },
+});
+
+// Keep SVG interaction in sync with selection changes
+state.addEventListener('selection-change', () => {
+  svgRenderer.setInteraction({
+    onNodeClick: (nodeId: string) => state.setSelectedNodeId(nodeId),
+    onNodeResize: (nodeId: string, width: number, height: number) => {
+      state.updateStyle(nodeId, 'width', width);
+      state.updateStyle(nodeId, 'height', height);
+    },
+    selectedNodeId: state.getSelectedNodeId(),
+  });
+  // Re-render to show updated selection
+  const result = state.getResult();
+  if (result) renderAll(result);
+});
+
 const renderers: { renderer: Renderer; container: HTMLElement }[] = [
   { renderer: svgRenderer, container: svgContainer },
   { renderer: canvasRenderer, container: canvasContainer },
