@@ -21,7 +21,7 @@ export class AsciiRenderer implements Renderer {
 
     const grid: string[][] = Array.from({ length: rows }, () => Array(cols).fill(' '));
 
-    renderNode(grid, result, 0, 0, 0);
+    drawNode(grid, result, 0, 0, 0);
 
     this.pre.textContent = grid.map(row => row.join('')).join('\n');
   }
@@ -32,41 +32,47 @@ export class AsciiRenderer implements Renderer {
   }
 }
 
-function putChar(grid: string[][], r: number, c: number, ch: string) {
+function put(grid: string[][], r: number, c: number, ch: string) {
   if (r >= 0 && r < grid.length && c >= 0 && c < (grid[0]?.length ?? 0)) grid[r][c] = ch;
 }
 
 function putStr(grid: string[][], r: number, c: number, text: string, maxLen: number) {
-  for (let i = 0; i < Math.min(text.length, maxLen); i++) putChar(grid, r, c + i, text[i]);
+  for (let i = 0; i < Math.min(text.length, maxLen); i++) put(grid, r, c + i, text[i]);
 }
 
-function renderNode(grid: string[][], node: FlowtextLayoutResult, offX: number, offY: number, depth: number) {
-  const c = Math.round((offX + node.x) / CHAR_W);
-  const r = Math.round((offY + node.y) / CHAR_H);
+function drawNode(grid: string[][], node: FlowtextLayoutResult, offX: number, offY: number, depth: number) {
+  const absX = offX + node.x;
+  const absY = offY + node.y;
+  const c0 = Math.round(absX / CHAR_W);
+  const r0 = Math.round(absY / CHAR_H);
   const w = Math.max(2, Math.round(node.width / CHAR_W));
   const h = Math.max(2, Math.round(node.height / CHAR_H));
 
   if (depth > MAX_DEPTH) {
-    putStr(grid, r + Math.floor(h / 2), c + Math.floor((w - 3) / 2), '...', w);
+    putStr(grid, r0 + Math.floor(h / 2), c0 + Math.floor((w - 3) / 2), '...', w);
     return;
   }
 
-  // Box
-  putChar(grid, r, c, '+');
-  putChar(grid, r, c + w - 1, '+');
-  putChar(grid, r + h - 1, c, '+');
-  putChar(grid, r + h - 1, c + w - 1, '+');
-  for (let i = c + 1; i < c + w - 1; i++) { putChar(grid, r, i, '-'); putChar(grid, r + h - 1, i, '-'); }
-  for (let i = r + 1; i < r + h - 1; i++) { putChar(grid, i, c, '|'); putChar(grid, i, c + w - 1, '|'); }
+  // Draw box border
+  put(grid, r0, c0, '+');
+  put(grid, r0, c0 + w - 1, '+');
+  put(grid, r0 + h - 1, c0, '+');
+  put(grid, r0 + h - 1, c0 + w - 1, '+');
+  for (let i = c0 + 1; i < c0 + w - 1; i++) { put(grid, r0, i, '-'); put(grid, r0 + h - 1, i, '-'); }
+  for (let i = r0 + 1; i < r0 + h - 1; i++) { put(grid, i, c0, '|'); put(grid, i, c0 + w - 1, '|'); }
 
-  // ID
-  putStr(grid, r, c + 1, node.id, w - 2);
+  // ID in top-left corner (after the +)
+  putStr(grid, r0, c0 + 1, node.id, w - 2);
 
-  // Text lines
+  // Text lines -- position matches SVG/Canvas proportionally
   if (node.lines) {
     for (const line of node.lines) {
-      const lr = Math.round((offY + node.y + line.y) / CHAR_H);
-      const lc = Math.round((offX + node.x + line.x) / CHAR_W);
+      // Use the same proportional y as pixel renderers: absY + line.y + line.height * 0.78
+      // Convert to grid row: round(pixelY / CHAR_H)
+      const linePixelY = absY + line.y + line.height * 0.5;
+      const lr = Math.round(linePixelY / CHAR_H);
+      const linePixelX = absX + line.x;
+      const lc = Math.max(c0 + 1, Math.round(linePixelX / CHAR_W));
       putStr(grid, lr, lc, line.text, w - 2);
     }
   }
@@ -74,7 +80,7 @@ function renderNode(grid: string[][], node: FlowtextLayoutResult, offX: number, 
   // Children
   if (node.children) {
     for (const child of node.children) {
-      renderNode(grid, child, offX + node.x, offY + node.y, depth + 1);
+      drawNode(grid, child, absX, absY, depth + 1);
     }
   }
 }
