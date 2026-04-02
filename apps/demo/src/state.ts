@@ -63,6 +63,37 @@ export class DemoState extends EventTarget {
     this.dispatchEvent(new CustomEvent('selection-change', { detail: id }));
   }
 
+  reorderChild(childId: string, newIndex: number): void {
+    // Find parent that contains this child
+    const parent = this.findParentOf(childId);
+    if (!parent || !parent.children) return;
+
+    const oldIndex = parent.children.findIndex((c) => c.id === childId);
+    if (oldIndex === -1) return;
+
+    const [child] = parent.children.splice(oldIndex, 1);
+    // Adjust index if removing before insertion point
+    const adjustedIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
+    parent.children.splice(adjustedIndex, 0, child);
+
+    this.dispatchEvent(new CustomEvent('node-change', { detail: this.node }));
+    this.scheduleLayout();
+  }
+
+  private findParentOf(childId: string): FlowtextNode | null {
+    const search = (node: FlowtextNode): FlowtextNode | null => {
+      if (node.children) {
+        for (const child of node.children) {
+          if (child.id === childId) return node;
+          const found = search(child);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return search(this.node);
+  }
+
   setConstraints(constraints: LayoutConstraints): void {
     this.constraints = constraints;
     this.scheduleLayout();
