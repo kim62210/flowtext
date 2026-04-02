@@ -1,220 +1,205 @@
-import { FlowtextError, type FlowtextLayoutResult } from 'flowtext';
-import { DemoState } from './state';
+import { layoutTree, type FlowtextNode, type FlowtextLayoutResult } from 'flowtext';
 import { SvgRenderer } from './renderers/svg-renderer';
 import { CanvasRenderer } from './renderers/canvas-renderer';
 import { AsciiRenderer } from './renderers/ascii-renderer';
 import type { Renderer, ViewportSize } from './renderers/types';
-import { presets } from './presets/index';
-import { createTabs } from './ui/tabs';
-import { createJsonEditor, type JsonEditorInstance } from './editor/json-editor';
-import { createPropertyPanel } from './editor/property-panel';
 
-const loadingOverlay = document.getElementById('loading-overlay')!;
-const errorOverlay = document.getElementById('error-overlay')!;
-const errorMessage = document.getElementById('error-message')!;
+// ── Helpers ──────────────────────────────────────────────
 
-// --- State ---
-const initialPreset = presets[0];
-const state = new DemoState(initialPreset.node, initialPreset.constraints);
-state.setSelectedNodeId(initialPreset.initialSelectedNodeId);
-
-// --- Renderers ---
-const svgContainer = document.getElementById('renderer-svg')!;
-const canvasContainer = document.getElementById('renderer-canvas')!;
-const asciiContainer = document.getElementById('renderer-ascii')!;
-
-const svgRenderer = new SvgRenderer();
-const canvasRenderer = new CanvasRenderer();
-const asciiRenderer = new AsciiRenderer();
-
-svgRenderer.mount(svgContainer);
-canvasRenderer.mount(canvasContainer);
-asciiRenderer.mount(asciiContainer);
-
-// --- SVG Interactive: click to select, drag to move/resize ---
-function updateSvgInteraction() {
-  svgRenderer.setInteraction({
-    selectedNodeId: state.getSelectedNodeId(),
-    onNodeClick(nodeId) {
-      state.setSelectedNodeId(nodeId);
-    },
-    onNodeResize(nodeId, width, height) {
-      state.updateStyles(nodeId, { width, height });
-    },
-    onNodeReorder(nodeId, newIndex) {
-      state.reorderChild(nodeId, newIndex);
-    },
-  });
+function mountTriple(svgEl: HTMLElement, canvasEl: HTMLElement, asciiEl: HTMLElement) {
+  const svg = new SvgRenderer();
+  const canvas = new CanvasRenderer();
+  const ascii = new AsciiRenderer();
+  svg.mount(svgEl);
+  canvas.mount(canvasEl);
+  ascii.mount(asciiEl);
+  return { svg, canvas, ascii, all: [
+    { renderer: svg as Renderer, container: svgEl },
+    { renderer: canvas as Renderer, container: canvasEl },
+    { renderer: ascii as Renderer, container: asciiEl },
+  ]};
 }
 
-updateSvgInteraction();
-
-state.addEventListener('selection-change', () => {
-  updateSvgInteraction();
-  const result = state.getResult();
-  if (result) renderAll(result);
-});
-
-const renderers: { renderer: Renderer; container: HTMLElement }[] = [
-  { renderer: svgRenderer, container: svgContainer },
-  { renderer: canvasRenderer, container: canvasContainer },
-  { renderer: asciiRenderer, container: asciiContainer },
-];
-
-function renderAll(result: FlowtextLayoutResult) {
-  requestAnimationFrame(() => {
-    for (const { renderer, container } of renderers) {
-      const viewport: ViewportSize = {
-        width: container.clientWidth,
-        height: container.clientHeight,
-      };
-      renderer.render(result, viewport);
-    }
-  });
+function renderAll(
+  renderers: { renderer: Renderer; container: HTMLElement }[],
+  result: FlowtextLayoutResult,
+) {
+  for (const { renderer, container } of renderers) {
+    const vp: ViewportSize = { width: container.clientWidth, height: container.clientHeight };
+    renderer.render(result, vp);
+  }
 }
 
-state.addEventListener('result-change', (e) => {
-  const result = (e as CustomEvent<FlowtextLayoutResult>).detail;
-  errorOverlay.hidden = true;
-  renderAll(result);
-});
+async function computeAndRender(
+  node: FlowtextNode,
+  constraints: { width?: number; height?: number },
+  renderers: { renderer: Renderer; container: HTMLElement }[],
+) {
+  const result = await layoutTree(node, constraints);
+  renderAll(renderers, result);
+  return result;
+}
 
-state.addEventListener('layout-error', (e) => {
-  const error = (e as CustomEvent).detail;
-  const message = formatErrorHint(error);
-  errorMessage.textContent = message;
-  errorOverlay.hidden = false;
-});
+// ── Demo 1: Text Reflow ─────────────────────────────────
 
-// Re-render on window resize
-let resizeTimer: ReturnType<typeof setTimeout> | null = null;
-window.addEventListener('resize', () => {
-  if (resizeTimer) clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    const result = state.getResult();
-    if (result) renderAll(result);
-  }, 100);
-});
-
-// --- Preset Tabs ---
-const presetTabsContainer = document.getElementById('preset-tabs')!;
-createTabs(
-  presetTabsContainer,
-  presets.map((p) => ({ id: p.id, label: p.label })),
-  (id) => {
-    const preset = presets.find((p) => p.id === id);
-    if (!preset) return;
-    state.setConstraints(preset.constraints);
-    state.setNode(preset.node);
-    state.setSelectedNodeId(preset.initialSelectedNodeId);
-    // Sync JSON editor
-    if (jsonEditor) {
-      jsonEditor.setValue(JSON.stringify(preset.node, null, 2));
-    }
-  },
-  initialPreset.id,
-);
-
-// --- Editor Tabs ---
-const editorTabsContainer = document.getElementById('editor-tabs')!;
-const jsonEditorContainer = document.getElementById('json-editor-container')!;
-const propertyPanelContainer = document.getElementById('property-panel-container')!;
-
-createTabs(
-  editorTabsContainer,
-  [
-    { id: 'json', label: 'JSON' },
-    { id: 'properties', label: 'Properties' },
-  ],
-  (id) => {
-    jsonEditorContainer.hidden = id !== 'json';
-    propertyPanelContainer.hidden = id !== 'properties';
-  },
-  'json',
-);
-
-// --- JSON Editor ---
-let jsonEditor: JsonEditorInstance | null = null;
-let suppressJsonSync = false;
-
-async function initJsonEditor() {
-  const initialJson = JSON.stringify(state.getNode(), null, 2);
-
-  jsonEditor = await createJsonEditor(
-    jsonEditorContainer,
-    initialJson,
-    (value) => {
-      if (suppressJsonSync) return;
-      try {
-        const parsed = JSON.parse(value);
-        suppressJsonSync = true;
-        state.setNode(parsed);
-        suppressJsonSync = false;
-      } catch {
-        // Invalid JSON -- ignore, user is still typing
-      }
-    },
+function initReflowDemo() {
+  const slider = document.getElementById('reflow-width') as HTMLInputElement;
+  const valueLabel = document.getElementById('reflow-width-value')!;
+  const triple = mountTriple(
+    document.getElementById('reflow-svg')!,
+    document.getElementById('reflow-canvas')!,
+    document.getElementById('reflow-ascii')!,
   );
 
-  // Sync editor when state changes from property panel
-  state.addEventListener('node-change', () => {
-    if (suppressJsonSync || !jsonEditor) return;
-    suppressJsonSync = true;
-    jsonEditor.setValue(JSON.stringify(state.getNode(), null, 2));
-    suppressJsonSync = false;
+  const node: FlowtextNode = {
+    id: 'container',
+    type: 'view',
+    style: { width: 360, padding: 20, flexDirection: 'column' },
+    children: [
+      {
+        id: 'paragraph',
+        type: 'text',
+        text: 'Flowtext computes layout without the DOM. It combines Yoga for structural flexbox layout with Pretext for paragraph measurement and line extraction. Resize the container to watch this text reflow across three different renderers simultaneously.',
+        style: { fontFamily: 'sans-serif', fontSize: 15, lineHeight: 22 },
+      },
+    ],
+  };
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  async function update() {
+    const w = Number(slider.value);
+    valueLabel.textContent = String(w);
+    node.style!.width = w;
+    await computeAndRender(node, { width: w }, triple.all);
+  }
+
+  slider.addEventListener('input', () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(update, 16);
   });
+
+  return update();
 }
 
-// --- Property Panel ---
-createPropertyPanel(propertyPanelContainer, state);
+// ── Demo 2: Flex Reorder ────────────────────────────────
 
-// --- Initialize ---
-async function init() {
-  try {
-    await initJsonEditor();
-    // Wait for the first layout result (triggers Yoga WASM init)
-    await new Promise<void>((resolve, reject) => {
-      const onResult = () => {
-        state.removeEventListener('result-change', onResult);
-        state.removeEventListener('layout-error', onError);
-        resolve();
-      };
-      const onError = (e: Event) => {
-        state.removeEventListener('result-change', onResult);
-        state.removeEventListener('layout-error', onError);
-        reject((e as CustomEvent).detail);
-      };
-      state.addEventListener('result-change', onResult);
-      state.addEventListener('layout-error', onError);
-    });
-    loadingOverlay.hidden = true;
-  } catch (error) {
-    loadingOverlay.innerHTML = `
-      <div class="error-content" style="border-color: var(--color-error);">
-        <p>Layout engine failed to load. Please reload.</p>
-        <button onclick="location.reload()" style="margin-top:12px;padding:6px 16px;border-radius:6px;border:1px solid var(--color-border);background:#fff;cursor:pointer;">
-          Reload
-        </button>
-      </div>
-    `;
-    throw error;
+function initReorderDemo() {
+  const triple = mountTriple(
+    document.getElementById('reorder-svg')!,
+    document.getElementById('reorder-canvas')!,
+    document.getElementById('reorder-ascii')!,
+  );
+
+  const node: FlowtextNode = {
+    id: 'root',
+    type: 'view',
+    style: { width: 300, padding: 12, flexDirection: 'column' },
+    children: [
+      { id: 'header', type: 'text', text: 'Header', style: { fontFamily: 'sans-serif', fontSize: 16, lineHeight: 28 } },
+      { id: 'navigation', type: 'text', text: 'Navigation', style: { fontFamily: 'sans-serif', fontSize: 14, lineHeight: 24 } },
+      { id: 'article', type: 'text', text: 'Article body text that will reflow when siblings are reordered above or below it.', style: { fontFamily: 'sans-serif', fontSize: 13, lineHeight: 20 } },
+      { id: 'sidebar', type: 'text', text: 'Sidebar', style: { fontFamily: 'sans-serif', fontSize: 14, lineHeight: 24 } },
+      { id: 'footer', type: 'text', text: 'Footer', style: { fontFamily: 'sans-serif', fontSize: 12, lineHeight: 20 } },
+    ],
+  };
+
+  let lastResult: FlowtextLayoutResult | null = null;
+
+  triple.svg.setInteraction({
+    selectedNodeId: null,
+    onNodeClick(nodeId) {
+      triple.svg.setInteraction({
+        ...triple.svg['interaction'],
+        selectedNodeId: nodeId,
+      });
+      if (lastResult) renderAll(triple.all, lastResult);
+    },
+    onNodeReorder(nodeId, newIndex) {
+      const children = node.children!;
+      const oldIndex = children.findIndex((c) => c.id === nodeId);
+      if (oldIndex === -1) return;
+      const [child] = children.splice(oldIndex, 1);
+      const adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
+      children.splice(adjusted, 0, child);
+      computeAndRender(node, { width: 300 }, triple.all).then((r) => { lastResult = r; });
+    },
+    onNodeResize(nodeId, w, h) {
+      const target = node.children?.find((c) => c.id === nodeId) ?? (nodeId === 'root' ? node : null);
+      if (!target) return;
+      if (!target.style) target.style = {};
+      target.style.width = w;
+      target.style.height = h;
+      computeAndRender(node, { width: 300 }, triple.all).then((r) => { lastResult = r; });
+    },
+  });
+
+  return computeAndRender(node, { width: 300 }, triple.all).then((r) => { lastResult = r; });
+}
+
+// ── Demo 3: OG Image ────────────────────────────────────
+
+function initOgDemo() {
+  const input = document.getElementById('og-title-input') as HTMLInputElement;
+  const triple = mountTriple(
+    document.getElementById('og-svg')!,
+    document.getElementById('og-canvas')!,
+    document.getElementById('og-ascii')!,
+  );
+
+  const node: FlowtextNode = {
+    id: 'card',
+    type: 'view',
+    style: { width: 1200, height: 630, padding: 60, flexDirection: 'column', justifyContent: 'space-between' },
+    children: [
+      {
+        id: 'brand',
+        type: 'text',
+        text: 'flowtext.dev',
+        style: { fontFamily: 'sans-serif', fontSize: 24, lineHeight: 32 },
+      },
+      {
+        id: 'title',
+        type: 'text',
+        text: input.value,
+        style: { fontFamily: 'sans-serif', fontSize: 56, lineHeight: 68, fontWeight: 700 },
+      },
+      {
+        id: 'meta',
+        type: 'view',
+        style: { flexDirection: 'row', justifyContent: 'space-between' },
+        children: [
+          { id: 'author', type: 'text', text: '@kim62210', style: { fontFamily: 'sans-serif', fontSize: 20, lineHeight: 28 } },
+          { id: 'date', type: 'text', text: 'April 2026', style: { fontFamily: 'sans-serif', fontSize: 20, lineHeight: 28 } },
+        ],
+      },
+    ],
+  };
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  async function update() {
+    const titleNode = node.children![1];
+    titleNode.text = input.value || 'Untitled';
+    await computeAndRender(node, { width: 1200, height: 630 }, triple.all);
   }
+
+  input.addEventListener('input', () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(update, 80);
+  });
+
+  return update();
 }
 
-init();
+// ── Boot ─────────────────────────────────────────────────
 
-// --- Error Formatting ---
-function formatErrorHint(error: unknown): string {
-  if (error instanceof FlowtextError) {
-    switch (error.code) {
-      case 'UNSUPPORTED_STYLE':
-        return `${error.message}\n\nSupported: flexDirection, justifyContent, alignItems, alignSelf, flexGrow, flexShrink, width, height, minWidth, maxWidth, minHeight, maxHeight, padding, margin, fontSize, lineHeight, fontFamily, fontWeight, whiteSpace`;
-      case 'INVALID_NODE':
-        return `${error.message}\n\nSupported node types: "view", "text". Each node must have "id" and "type".`;
-      case 'MEASURE_FAILED':
-        return `${error.message}\n\nCheck that text nodes have valid fontSize and fontFamily.`;
-    }
-  }
-  if (error instanceof Error) return error.message;
-  return String(error);
+async function boot() {
+  await Promise.all([
+    initReflowDemo(),
+    initReorderDemo(),
+    initOgDemo(),
+  ]);
 }
+
+boot();
