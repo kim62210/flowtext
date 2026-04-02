@@ -445,6 +445,12 @@ html, body {
   }
 }
 
+/* ===== SVG Interaction ===== */
+#renderer-svg svg {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* ===== Utility ===== */
 .sr-only {
   position: absolute;
